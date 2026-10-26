@@ -1,12 +1,336 @@
-import React,{useEffect,useState} from 'react';import{createRoot}from'react-dom/client';import{Bar,BarChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis}from'recharts';import'./style.css';
-type M='write'|'speak'|'recall';type Trial={id:string;date:string;methods:M[];guess:M;sids:number[];scores:number[]};type W={en:string;jp:string};
-const ms:{id:M;name:string;emoji:string;desc:string}[]=[{id:'write',name:'書いて覚える',emoji:'✍️',desc:'英単語と日本語訳を紙に書いて覚えます。'},{id:'speak',name:'声に出して覚える',emoji:'🔊',desc:'英単語と日本語訳を声に出して読みます。'},{id:'recall',name:'思い出して覚える',emoji:'🧠',desc:'意味を思い出してから答えを確認します。'}];const sets:W[][]=[[['apple','りんご'],['river','川'],['bright','明るい'],['answer','答え'],['travel','旅行する'],['quiet','静かな'],['forest','森'],['choose','選ぶ'],['carry','運ぶ'],['early','早い']],[['window','窓'],['garden','庭'],['strong','強い'],['future','未来'],['picture','絵・写真'],['village','村'],['invite','招待する'],['careful','注意深い'],['season','季節'],['return','戻る']],[['bridge','橋'],['cloud','雲'],['clever','賢い'],['decide','決める'],['journey','旅'],['market','市場'],['protect','守る'],['useful','役に立つ'],['summer','夏'],['remember','覚えている']]].map(s=>s.map(([en,jp])=>({en,jp})));const KEY='manabi-lab-v1';const nm=(m:M)=>ms.find(x=>x.id===m)!.name;const get=():Trial[]=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}};
-function App(){const[page,P]=useState('home'),[hist,H]=useState(get),[chosen,C]=useState<M[]>([]),[guess,G]=useState<M>(),[trial,T]=useState<Trial>(),[round,R]=useState(0),[sec,S]=useState(300),[run,U]=useState(false),[q,Q]=useState(0),[reveal,V]=useState(false),[answers,A]=useState<boolean[]>([]);useEffect(()=>{if(!run)return;const id=setInterval(()=>S(s=>{if(s<=1){U(false);return 0}return s-1}),1000);return()=>clearInterval(id)},[run]);const words=trial?sets[trial.sids[round]]:sets[0];const start=()=>{if(!guess||chosen.length!==2||!chosen.includes(guess))return;let a=Math.floor(Math.random()*3),b=Math.floor(Math.random()*3);if(a===b)b=(b+1)%3;T({id:crypto.randomUUID(),date:new Date().toISOString(),methods:chosen,guess,sids:[a,b],scores:[]});R(0);S(300);P('study')};const quiz=()=>{Q(0);A([]);V(false);P('quiz')};const answer=(yes:boolean)=>{const next=[...answers,yes];A(next);V(false);if(q<9){Q(q+1);return}const scores=[...(trial?.scores||[]),next.filter(Boolean).length];if(round===0){T({...trial!,scores});R(1);S(300);U(false);P('study')}else{const t={...trial!,scores};T(t);const all=[t,...hist];H(all);localStorage.setItem(KEY,JSON.stringify(all));P('result')}};const reset=()=>{U(false);P('home')};return <div className="app"><header><button className="brand" onClick={reset}>🧪 <b>まなびラボ<small>STUDY METHOD LAB</small></b></button><button className="nav" onClick={()=>P('history')}>▤ 実験履歴　{hist.length}</button></header><main>
-{page==='home'&&<section className="hero"><div><label>✧ 自分に合う勉強法を見つけよう</label><h1>勉強法を、<br/><em>実験</em>してみよう。</h1><p>2つの方法を同じ時間だけ試して、結果を比べる。<br/>あなたに合う学び方を見つける、小さな実験室です。</p><button className="primary" onClick={()=>{C([]);G(undefined);P('setup')}}>実験をはじめる　→</button><small>◷ 約15分　 ·　英単語10問 × 2セット</small></div><div className="hero-art"><div className="paper"><small>今日のミニ実験　　READY</small><h2>remember</h2><p>思い出す</p><hr/><div className="bars"><i/><i/><i/><i/><i/></div><small>小さな実験が、大きな発見に。</small></div><aside>自分の結果が<br/><b>いちばんのヒント ✨</b></aside></div><div className="steps">① 方法を選ぶ　　›　　② 5分ずつ学ぶ　　›　　③ 結果を比べる</div></section>}
-{page==='setup'&&<section className="flow"><button className="back" onClick={reset}>← ホームへ</button><div className="heading"><label>EXPERIMENT SETUP</label><h2>比べたい勉強法を選ぼう</h2><p>気になる方法を2つ選んでください。</p></div><div className="methods">{ms.map(m=><button key={m.id} className={'method '+(chosen.includes(m.id)?'selected':'')} onClick={()=>C(c=>c.includes(m.id)?c.filter(x=>x!==m.id):c.length<2?[...c,m.id]:c)}><span>{m.emoji}</span><b>{m.name}</b><small>{m.desc}</small>{chosen.includes(m.id)&&<i>✓</i>}</button>)}</div><div className="callout">💡 結果は人それぞれ。正解を決めるのではなく、今回のあなたの結果を比べます。</div><div className="heading"><label>YOUR PREDICTION</label><h2>どちらが覚えられそう？</h2><p>実験前の予想を記録します。</p></div><div className="guesses">{chosen.map(m=><button className={guess===m?'selected':''} key={m} onClick={()=>G(m)}>{nm(m)}　{guess===m?'✓':''}</button>)}</div><div className="center"><button disabled={!guess||chosen.length!==2} className="primary" onClick={start}>実験を始める　→</button></div></section>}
-{page==='study'&&trial&&<section className="flow"><div className="heading"><label>ROUND {round+1} / 2</label><h2>{nm(trial.methods[round])}で学ぼう</h2><p>{ms.find(m=>m.id===trial.methods[round])?.desc}</p></div><div className="timer"><small>学習時間 · 5 MINUTES</small><strong>{String(Math.floor(sec/60)).padStart(2,'0')}<i>:</i>{String(sec%60).padStart(2,'0')}</strong><p>表示された単語を使って、アプリの外で学習しましょう。</p>{sec===0?<button className="primary" onClick={quiz}>確認テストへ　→</button>:<><button className="primary" onClick={()=>U(!run)}>{run?'一時停止':'学習を開始'}　{run?'Ⅱ':'▶'}</button></>}</div><div className="wordbox"><b>📖 今日の英単語 <small>10 WORDS</small></b><div>{words.map(w=><p key={w.en}><strong>{w.en}</strong><span>{trial.methods[round]==='recall'?'••••••':w.jp}</span></p>)}</div></div></section>}
-{page==='quiz'&&trial&&<section className="flow"><div className="heading"><label>ROUND {round+1} · QUICK CHECK</label><h2>意味を思い出してみよう</h2><p>答えを見る前に、頭の中で意味を考えてください。</p></div><div className="quiz"><small>QUESTION {q+1} / 10</small><div className="progress"><i style={{width:`${(q+1)*10}%`}}/></div><strong>{words[q].en}</strong>{reveal?<><div className="answer">正解<b>{words[q].jp}</b></div><p>覚えていましたか？正直に選んでください。</p><div className="row"><button onClick={()=>answer(true)}>✓ 覚えていた</button><button onClick={()=>answer(false)}>✕ 覚えていなかった</button></div></>:<><p>意味を思い出したら、答えを見てみましょう。</p><button className="primary" onClick={()=>V(true)}>答えを見る　→</button></>}</div><p className="note">このテストは自己採点式です。正直な振り返りに使いましょう。</p></section>}
-{page==='result'&&trial&&<section className="flow"><div className="heading"><label>YOUR EXPERIMENT RESULT</label><h2>今回の実験、おつかれさま！</h2><p>{new Date(trial.date).toLocaleDateString('ja-JP')} の結果です。</p></div><div className="scores">{trial.methods.map((m,i)=><article key={m}><b>{nm(m)} {guess===m&&<small>あなたの予想</small>}</b><strong>{trial.scores[i]*10}%</strong><p>{trial.scores[i]} / 10 問 正解</p></article>)}</div><div className="chart"><b>正答率を比べる <small>自己採点による今回の結果</small></b><ResponsiveContainer width="100%" height={230}><BarChart data={trial.methods.map((m,i)=>({name:nm(m),正答率:trial.scores[i]*10}))}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name"/><YAxis domain={[0,100]} unit="%"/><Tooltip/><Bar dataKey="正答率" fill="#789877" radius={[8,8,0,0]}/></BarChart></ResponsiveContainer></div><div className="callout">{trial.scores[0]===trial.scores[1]?`✨ 今回はどちらも${trial.scores[0]*10}%で同じ結果でした。別の問題でも試してみましょう。`:`✨ 今回の実験では「${nm(trial.methods[trial.scores[0]>trial.scores[1]?0:1])}」の正答率が${Math.abs(trial.scores[0]-trial.scores[1])*10}ポイント高い結果でした。`}<br/>実験前の予想は「{nm(trial.guess)}」。別の問題でも試してみましょう。</div><p className="note">自己採点による結果です。問題の難しさや集中度でも変わるため、勉強法の効果を証明するものではありません。</p><div className="row center"><button className="secondary" onClick={()=>P('history')}>実験履歴へ</button><button className="primary" onClick={()=>{C([]);G(undefined);P('setup')}}>もう一度実験する　→</button></div></section>}
-{page==='history'&&<section className="flow"><div className="heading"><label>YOUR LAB NOTE</label><h2>実験履歴</h2><p>これまでの実験を振り返りましょう。</p></div>{!hist.length?<div className="empty"><span>🧪</span><b>まだ実験履歴がありません</b><p>最初の実験を始めて、自分の学び方を比べてみましょう。</p><button className="primary" onClick={()=>P('setup')}>実験をはじめる</button></div>:hist.map(t=><article className="history" key={t.id}><small>{new Date(t.date).toLocaleDateString('ja-JP')}</small>{t.methods.map((m,i)=><p key={m}>{nm(m)}<b>{t.scores[i]*10}%</b></p>)}<small>予想：{nm(t.guess)}</small></article>)}{hist.length>0&&<button className="link" onClick={()=>{if(confirm('履歴をすべて削除しますか？')){H([]);localStorage.removeItem(KEY)}}}>履歴をすべて削除</button>}</section>}
-</main><footer>まなびラボ <span>結果は、あなたの次のヒント。</span></footer></div>};createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
+import { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { ArrowLeft, ArrowRight, Check, FlaskConical, History, RotateCcw, Sparkles } from 'lucide-react';
+import { studyMethods, methodName } from './data/methods';
+import { clearExperiments, loadExperiments, saveExperiments } from './data/storage';
+import { wordSets } from './data/wordSets';
+import { LEARNING_DURATION_SECONDS } from './domain/constants';
+import type { ExperimentRecord, Screen, StudyMethodId, WordItem } from './domain/types';
+import './style.css';
+
+interface ActiveExperiment {
+  id: string;
+  date: string;
+  methods: [StudyMethodId, StudyMethodId];
+  prediction: StudyMethodId;
+  wordSetIds: [string, string];
+  scores: number[];
+}
+
+const screenFromPath = (pathname: string): Screen => {
+  if (pathname === '/experiment/new') return 'setup';
+  if (pathname.endsWith('/study')) return 'study';
+  if (pathname.endsWith('/test')) return 'quiz';
+  if (pathname.endsWith('/result')) return 'result';
+  if (pathname === '/history') return 'history';
+  return 'home';
+};
+
+const routeFor = (screen: Screen, experimentId?: string): string => {
+  if (screen === 'setup') return '/experiment/new';
+  if (screen === 'history') return '/history';
+  if (screen === 'study') return `/experiment/${experimentId}/study`;
+  if (screen === 'quiz') return `/experiment/${experimentId}/test`;
+  if (screen === 'result') return `/experiment/${experimentId}/result`;
+  return '/';
+};
+
+function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const screen = screenFromPath(location.pathname);
+  const [experiments, setExperiments] = useState<ExperimentRecord[]>(loadExperiments);
+  const [selectedMethods, setSelectedMethods] = useState<StudyMethodId[]>([]);
+  const [prediction, setPrediction] = useState<StudyMethodId>();
+  const [active, setActive] = useState<ActiveExperiment>();
+  const [round, setRound] = useState<0 | 1>(0);
+  const [secondsLeft, setSecondsLeft] = useState(LEARNING_DURATION_SECONDS);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answerVisible, setAnswerVisible] = useState(false);
+  const [answers, setAnswers] = useState<boolean[]>([]);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    if (secondsLeft <= 0) {
+      setTimerRunning(false);
+      return;
+    }
+    const timerId = window.setTimeout(() => setSecondsLeft((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timerId);
+  }, [secondsLeft, timerRunning]);
+
+  useEffect(() => {
+    if (['study', 'quiz', 'result'].includes(screen) && !active) navigate('/', { replace: true });
+  }, [active, navigate, screen]);
+
+  const go = (target: Screen, experimentId = active?.id) => navigate(routeFor(target, experimentId));
+  const currentSet = active ? wordSets.find((set) => set.id === active.wordSetIds[round]) : undefined;
+  const currentWords = currentSet?.words ?? wordSets[0].words;
+
+  function startNewExperiment() {
+    setSelectedMethods([]);
+    setPrediction(undefined);
+    setActive(undefined);
+    go('setup');
+  }
+
+  function toggleMethod(id: StudyMethodId) {
+    if (selectedMethods.includes(id)) {
+      setSelectedMethods((current) => current.filter((methodId) => methodId !== id));
+      if (prediction === id) setPrediction(undefined);
+      return;
+    }
+    if (selectedMethods.length < 2) setSelectedMethods((current) => [...current, id]);
+  }
+
+  function beginExperiment() {
+    if (selectedMethods.length !== 2 || !prediction || !selectedMethods.includes(prediction)) return;
+    const [firstMethod, secondMethod] = selectedMethods as [StudyMethodId, StudyMethodId];
+    const firstSetIndex = Math.floor(Math.random() * wordSets.length);
+    let secondSetIndex = Math.floor(Math.random() * wordSets.length);
+    if (firstSetIndex === secondSetIndex) secondSetIndex = (secondSetIndex + 1) % wordSets.length;
+    const record: ActiveExperiment = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      methods: [firstMethod, secondMethod],
+      prediction,
+      wordSetIds: [wordSets[firstSetIndex].id, wordSets[secondSetIndex].id],
+      scores: [],
+    };
+    setActive(record);
+    setRound(0);
+    setSecondsLeft(LEARNING_DURATION_SECONDS);
+    setTimerRunning(false);
+    go('study', record.id);
+  }
+
+  function openQuiz() {
+    setQuestionIndex(0);
+    setAnswers([]);
+    setAnswerVisible(false);
+    go('quiz');
+  }
+
+  function submitAnswer(remembered: boolean) {
+    if (!active) return;
+    const completedAnswers = [...answers, remembered];
+    setAnswers(completedAnswers);
+    setAnswerVisible(false);
+    if (questionIndex < currentWords.length - 1) {
+      setQuestionIndex((index) => index + 1);
+      return;
+    }
+
+    const score = completedAnswers.filter(Boolean).length;
+    const nextScores = [...active.scores, score];
+    if (round === 0) {
+      setActive({ ...active, scores: nextScores });
+      setRound(1);
+      setSecondsLeft(LEARNING_DURATION_SECONDS);
+      setTimerRunning(false);
+      go('study');
+      return;
+    }
+
+    const completed: ExperimentRecord = {
+      id: active.id,
+      date: active.date,
+      methods: active.methods,
+      prediction: active.prediction,
+      wordSetIds: active.wordSetIds,
+      studyDurationSeconds: [LEARNING_DURATION_SECONDS, LEARNING_DURATION_SECONDS],
+      immediateScores: [nextScores[0], nextScores[1]],
+      completedAt: new Date().toISOString(),
+    };
+    const nextExperiments = [completed, ...experiments];
+    saveExperiments(nextExperiments);
+    setExperiments(nextExperiments);
+    setActive({ ...active, scores: nextScores });
+    go('result');
+  }
+
+  function deleteExperiments() {
+    if (!window.confirm('実験履歴をすべて削除しますか？')) return;
+    clearExperiments();
+    setExperiments([]);
+  }
+
+  return (
+    <div className="app">
+      <header>
+        <button className="brand" onClick={() => go('home')} aria-label="まなびラボ ホーム">
+          <span><FlaskConical size={20} /></span>
+          <b>まなびラボ<small>STUDY METHOD LAB</small></b>
+        </button>
+        <button className={`nav ${screen === 'history' ? 'nav-active' : ''}`} onClick={() => go('history')}>
+          <History size={17} /> 実験履歴 <i>{experiments.length}</i>
+        </button>
+      </header>
+      <main>
+        {screen === 'home' && <HomeScreen onStart={startNewExperiment} onHistory={() => go('history')} />}
+        {screen === 'setup' && <SetupScreen
+          selectedMethods={selectedMethods}
+          prediction={prediction}
+          onToggleMethod={toggleMethod}
+          onPredict={setPrediction}
+          onStart={beginExperiment}
+          onBack={() => go('home')}
+        />}
+        {screen === 'study' && active && <StudyScreen
+          active={active}
+          round={round}
+          words={currentWords}
+          secondsLeft={secondsLeft}
+          timerRunning={timerRunning}
+          onToggleTimer={() => setTimerRunning((running) => !running)}
+          onContinue={openQuiz}
+        />}
+        {screen === 'quiz' && active && <QuizScreen
+          round={round}
+          words={currentWords}
+          questionIndex={questionIndex}
+          answerVisible={answerVisible}
+          onShowAnswer={() => setAnswerVisible(true)}
+          onAnswer={submitAnswer}
+        />}
+        {screen === 'result' && active && <ResultScreen active={active} onHome={() => go('home')} onHistory={() => go('history')} onRetry={startNewExperiment} />}
+        {screen === 'history' && <HistoryScreen experiments={experiments} onStart={startNewExperiment} onDelete={deleteExperiments} />}
+      </main>
+      <footer>まなびラボ <span>結果は、あなたの次のヒント。</span></footer>
+    </div>
+  );
+}
+
+function HomeScreen({ onStart, onHistory }: { onStart: () => void; onHistory: () => void }) {
+  return (
+    <section className="hero">
+      <div>
+        <label><Sparkles size={15} /> 自分に合う勉強法を見つけよう</label>
+        <h1>勉強法を、<br /><em>実験</em>してみよう。</h1>
+        <p>2つの方法を同じ時間だけ試して、結果を比べる。<br />あなたに合う学び方を見つける、小さな実験室です。</p>
+        <button className="primary" onClick={onStart}>実験をはじめる <ArrowRight size={17} /></button>
+        <small>◷ 約15分　 ·　英単語10問 × 2セット</small>
+      </div>
+      <div className="hero-art">
+        <div className="paper"><small>今日のミニ実験　　READY</small><h2>remember</h2><p>思い出す</p><hr /><div className="bars"><i /><i /><i /><i /><i /></div><small>小さな実験が、大きな発見に。</small></div>
+        <aside>自分の結果が<br /><b>いちばんのヒント ✨</b></aside>
+      </div>
+      <div className="steps"><span>① 方法を選ぶ</span><b>›</b><span>② 5分ずつ学ぶ</span><b>›</b><span>③ 結果を比べる</span></div>
+      <button className="home-history" onClick={onHistory}>これまでの実験を見る <ArrowRight size={14} /></button>
+    </section>
+  );
+}
+
+function SetupScreen({ selectedMethods, prediction, onToggleMethod, onPredict, onStart, onBack }: {
+  selectedMethods: StudyMethodId[];
+  prediction?: StudyMethodId;
+  onToggleMethod: (id: StudyMethodId) => void;
+  onPredict: (id: StudyMethodId | undefined) => void;
+  onStart: () => void;
+  onBack: () => void;
+}) {
+  const canStart = selectedMethods.length === 2 && !!prediction && selectedMethods.includes(prediction);
+  return (
+    <section className="flow">
+      <button className="back" onClick={onBack}><ArrowLeft size={16} /> ホームへ</button>
+      <div className="heading"><label>STEP 1 · EXPERIMENT SETUP</label><h2>比べたい勉強法を選ぼう</h2><p>気になる方法を2つ選んでください。<b>{selectedMethods.length} / 2</b></p></div>
+      <div className="methods">
+        {studyMethods.map((method) => {
+          const selected = selectedMethods.includes(method.id);
+          const disabled = !selected && selectedMethods.length === 2;
+          return <button key={method.id} type="button" aria-pressed={selected} disabled={disabled} className={`method ${selected ? 'selected' : ''}`} onClick={() => onToggleMethod(method.id)}>
+            <span>{method.emoji}</span><b>{method.name}</b><small>{method.description}</small>{selected && <i><Check size={14} /></i>}
+          </button>;
+        })}
+      </div>
+      <div className="callout"><span>💡</span><div><b>結果は人それぞれ</b><p>正解の勉強法を決めるのではなく、今回のあなたの結果を比べます。</p></div></div>
+      <div className="heading prediction-heading"><label>STEP 2 · YOUR PREDICTION</label><h2>どちらが覚えられそう？</h2><p>実験前の予想を記録します。</p></div>
+      {selectedMethods.length === 2 ? <div className="guesses">{selectedMethods.map((id) => {
+        const method = studyMethods.find((item) => item.id === id)!;
+        return <button key={id} type="button" aria-pressed={prediction === id} className={prediction === id ? 'selected' : ''} onClick={() => onPredict(prediction === id ? undefined : id)}>
+          <span>{method.emoji}</span>{method.name}{prediction === id && <Check size={15} />}
+        </button>;
+      })}</div> : <p className="setup-hint">まず、比較する勉強法を2つ選んでください。</p>}
+      <div className="center"><button disabled={!canStart} className="primary" onClick={onStart}>実験を始める <ArrowRight size={17} /></button></div>
+    </section>
+  );
+}
+
+function StudyScreen({ active, round, words, secondsLeft, timerRunning, onToggleTimer, onContinue }: {
+  active: ActiveExperiment;
+  round: 0 | 1;
+  words: WordItem[];
+  secondsLeft: number;
+  timerRunning: boolean;
+  onToggleTimer: () => void;
+  onContinue: () => void;
+}) {
+  const method = studyMethods.find((item) => item.id === active.methods[round])!;
+  return (
+    <section className="flow">
+      <div className="heading"><label>ROUND {round + 1} / 2 · LEARN</label><h2>{method.name}で学ぼう</h2><p>{method.description}</p></div>
+      <div className="method-instructions"><b>この方法でやってみよう</b><ol>{method.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol></div>
+      <div className="timer"><small>学習時間 · 5 MINUTES</small><strong>{String(Math.floor(secondsLeft / 60)).padStart(2, '0')}<i>:</i>{String(secondsLeft % 60).padStart(2, '0')}</strong><p>表示された単語を使って、アプリの外で学習しましょう。</p>
+        {secondsLeft === 0 ? <button className="primary" onClick={onContinue}>確認テストへ <ArrowRight size={16} /></button> : <button className="primary" onClick={onToggleTimer}>{timerRunning ? '一時停止　Ⅱ' : '学習を開始　▶'}</button>}
+      </div>
+      <div className="wordbox"><b>📖 今日の英単語 <small>10 WORDS</small></b><div>{words.map((word) => <p key={word.id}><strong>{word.english}</strong><span>{method.id === 'recall' ? '••••••' : word.japanese}</span></p>)}</div></div>
+    </section>
+  );
+}
+
+function QuizScreen({ round, words, questionIndex, answerVisible, onShowAnswer, onAnswer }: {
+  round: 0 | 1;
+  words: WordItem[];
+  questionIndex: number;
+  answerVisible: boolean;
+  onShowAnswer: () => void;
+  onAnswer: (remembered: boolean) => void;
+}) {
+  const word = words[questionIndex];
+  return (
+    <section className="flow"><div className="heading"><label>ROUND {round + 1} · QUICK CHECK</label><h2>意味を思い出してみよう</h2><p>答えを見る前に、頭の中で意味を考えてください。</p></div>
+      <div className="quiz"><small>QUESTION {questionIndex + 1} / {words.length}</small><div className="progress"><i style={{ width: `${((questionIndex + 1) / words.length) * 100}%` }} /></div><strong>{word.english}</strong>
+        {answerVisible ? <><div className="answer">正解<b>{word.japanese}</b></div><p>覚えていましたか？正直に選んでください。</p><div className="row"><button onClick={() => onAnswer(true)}>✓ 覚えていた</button><button onClick={() => onAnswer(false)}>✕ 覚えていなかった</button></div></> : <><p>意味を思い出したら、答えを見てみましょう。</p><button className="primary" onClick={onShowAnswer}>答えを見る <ArrowRight size={16} /></button></>}
+      </div><p className="note">このテストは自己採点式です。正直な振り返りに使いましょう。</p>
+    </section>
+  );
+}
+
+function ResultScreen({ active, onHome, onHistory, onRetry }: { active: ActiveExperiment; onHome: () => void; onHistory: () => void; onRetry: () => void }) {
+  const scores: [number, number] = [active.scores[0] ?? 0, active.scores[1] ?? 0];
+  const winnerIndex = scores[0] === scores[1] ? null : scores[0] > scores[1] ? 0 : 1;
+  const predictionWasRight = winnerIndex !== null && active.methods[winnerIndex] === active.prediction;
+  const comment = winnerIndex === null
+    ? `今回はどちらも${scores[0] * 10}%で同じ結果でした。別の問題セットでも試してみましょう。`
+    : `今回の実験では「${methodName(active.methods[winnerIndex])}」の正答率が${Math.abs(scores[0] - scores[1]) * 10}ポイント高い結果でした。${predictionWasRight ? '実験前の予想と一致しました。' : '実験前の予想とは異なる結果でした。'}`;
+  const chartData = active.methods.map((method, index) => ({ name: methodName(method), 正答率: scores[index] * 10 }));
+  return (
+    <section className="flow"><div className="heading"><label>YOUR EXPERIMENT RESULT</label><h2>今回の実験、おつかれさま！</h2><p>{new Date(active.date).toLocaleDateString('ja-JP')} の結果です。</p></div>
+      <div className="scores">{active.methods.map((method, index) => <article key={method}><b>{methodName(method)} {active.prediction === method && <small>あなたの予想</small>}</b><strong>{scores[index] * 10}%</strong><p>{scores[index]} / 10 問 正解</p></article>)}</div>
+      <div className="chart"><b>正答率を比べる <small>自己採点による今回の結果</small></b><ResponsiveContainer width="100%" height={230}><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" /><YAxis domain={[0, 100]} unit="%" /><Tooltip /><Bar dataKey="正答率" fill="#789877" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
+      <div className="callout">✨ {comment}<br />次は別の問題セットでも試してみましょう。</div><p className="note">自己採点による結果です。問題の難しさや集中度でも変わるため、勉強法の効果を証明するものではありません。</p>
+      <div className="row center"><button className="secondary" onClick={onHome}>ホームへ</button><button className="secondary" onClick={onHistory}>実験履歴へ</button><button className="primary" onClick={onRetry}><RotateCcw size={16} /> もう一度実験する</button></div>
+    </section>
+  );
+}
+
+function HistoryScreen({ experiments, onStart, onDelete }: { experiments: ExperimentRecord[]; onStart: () => void; onDelete: () => void }) {
+  return (
+    <section className="flow"><div className="heading"><label>YOUR LAB NOTE</label><h2>実験履歴</h2><p>これまでの実験を振り返りましょう。</p></div>
+      {!experiments.length ? <div className="empty"><span>🧪</span><b>まだ実験履歴がありません</b><p>最初の実験を始めて、自分の学び方を比べてみましょう。</p><button className="primary" onClick={onStart}>実験をはじめる <ArrowRight size={16} /></button></div> : <>
+        {experiments.map((experiment) => <article className="history" key={experiment.id}><small>{new Date(experiment.date).toLocaleDateString('ja-JP')}</small>{experiment.methods.map((method, index) => <p key={method}>{methodName(method)}<b>{experiment.immediateScores[index] * 10}%</b></p>)}<small>予想：{methodName(experiment.prediction)}</small></article>)}
+        <button className="link" onClick={onDelete}>履歴をすべて削除</button>
+      </>}
+    </section>
+  );
+}
+
+function Root() {
+  return <BrowserRouter><App /></BrowserRouter>;
+}
+
+createRoot(document.getElementById('root')!).render(<Root />);
 
