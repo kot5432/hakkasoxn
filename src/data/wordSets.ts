@@ -1,0 +1,25 @@
+import type { WordSet } from '../domain/types';
+
+export const wordSets: WordSet[] = [
+  { id: 'set-a', title: '単語セット A', level: 1, words: [
+    { id: 'a-01', english: 'apple', japanese: 'りんご', level: 1 }, { id: 'a-02', english: 'river', japanese: '川', level: 1 },
+    { id: 'a-03', english: 'bright', japanese: '明るい', level: 1 }, { id: 'a-04', english: 'answer', japanese: '答え', level: 1 },
+    { id: 'a-05', english: 'travel', japanese: '旅行する', level: 1 }, { id: 'a-06', english: 'quiet', japanese: '静かな', level: 1 },
+    { id: 'a-07', english: 'forest', japanese: '森', level: 1 }, { id: 'a-08', english: 'choose', japanese: '選ぶ', level: 1 },
+    { id: 'a-09', english: 'carry', japanese: '運ぶ', level: 1 }, { id: 'a-10', english: 'early', japanese: '早い', level: 1 },
+  ] },
+  { id: 'set-b', title: '単語セット B', level: 1, words: [
+    { id: 'b-01', english: 'window', japanese: '窓', level: 1 }, { id: 'b-02', english: 'garden', japanese: '庭', level: 1 },
+    { id: 'b-03', english: 'strong', japanese: '強い', level: 1 }, { id: 'b-04', english: 'future', japanese: '未来', level: 1 },
+    { id: 'b-05', english: 'picture', japanese: '絵・写真', level: 1 }, { id: 'b-06', english: 'village', japanese: '村', level: 1 },
+    { id: 'b-07', english: 'invite', japanese: '招待する', level: 1 }, { id: 'b-08', english: 'careful', japanese: '注意深い', level: 1 },
+    { id: 'b-09', english: 'season', japanese: '季節', level: 1 }, { id: 'b-10', english: 'return', japanese: '戻る', level: 1 },
+  ] },
+  { id: 'set-c', title: '単語セット C', level: 1, words: [
+    { id: 'c-01', english: 'bridge', japanese: '橋', level: 1 }, { id: 'c-02', english: 'cloud', japanese: '雲', level: 1 },
+    { id: 'c-03', english: 'clever', japanese: '賢い', level: 1 }, { id: 'c-04', english: 'decide', japanese: '決める', level: 1 },
+    { id: 'c-05', english: 'journey', japanese: '旅', level: 1 }, { id: 'c-06', english: 'market', japanese: '市場', level: 1 },
+    { id: 'c-07', english: 'protect', japanese: '守る', level: 1 }, { id: 'c-08', english: 'useful', japanese: '役に立つ', level: 1 },
+    { id: 'c-09', english: 'summer', japanese: '夏', level: 1 }, { id: 'c-10', english: 'remember', japanese: '覚えている', level: 1 },
+  ] },
+];
