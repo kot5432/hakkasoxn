@@ -1,6 +1,8 @@
 # まなびラボ — 勉強法実験アプリ
 
-React + TypeScript + Vite の英単語学習実験アプリです。
+## ドキュメント
+
+- [プロダクト定義書 v1.0](docs/プロダクト定義書_v1.0.txt)
 
 ## 起動
 Node.js を用意し、`npm install` のあと `npm run dev` を実行してください。
