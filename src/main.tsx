@@ -48,19 +48,25 @@ function App() {
   const [round, setRound] = useState<0 | 1>(0);
   const [secondsLeft, setSecondsLeft] = useState(LEARNING_DURATION_SECONDS);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [timerDeadline, setTimerDeadline] = useState<number | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answerVisible, setAnswerVisible] = useState(false);
   const [answers, setAnswers] = useState<boolean[]>([]);
 
   useEffect(() => {
-    if (!timerRunning) return;
-    if (secondsLeft <= 0) {
-      setTimerRunning(false);
-      return;
-    }
-    const timerId = window.setTimeout(() => setSecondsLeft((seconds) => Math.max(0, seconds - 1)), 1000);
-    return () => window.clearTimeout(timerId);
-  }, [secondsLeft, timerRunning]);
+    if (!timerRunning || timerDeadline === null) return;
+    const updateRemainingTime = () => {
+      const remaining = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
+      setSecondsLeft((current) => current === remaining ? current : remaining);
+      if (remaining === 0) {
+        setTimerRunning(false);
+        setTimerDeadline(null);
+      }
+    };
+    updateRemainingTime();
+    const timerId = window.setInterval(updateRemainingTime, 250);
+    return () => window.clearInterval(timerId);
+  }, [timerDeadline, timerRunning]);
 
   useEffect(() => {
     if (['study', 'quiz', 'result'].includes(screen) && !active) navigate('/', { replace: true });
@@ -71,6 +77,9 @@ function App() {
   const currentWords = currentSet?.words ?? wordSets[0].words;
 
   function startNewExperiment() {
+    setTimerRunning(false);
+    setTimerDeadline(null);
+    setSecondsLeft(LEARNING_DURATION_SECONDS);
     setSelectedMethods([]);
     setPrediction(undefined);
     setActive(undefined);
@@ -103,17 +112,31 @@ function App() {
     setActive(record);
     setRound(0);
     setSecondsLeft(LEARNING_DURATION_SECONDS);
+    setTimerDeadline(null);
     setTimerRunning(false);
     go('study', record.id);
   }
 
   function openQuiz() {
+    setTimerRunning(false);
+    setTimerDeadline(null);
     setQuestionIndex(0);
     setAnswers([]);
     setAnswerVisible(false);
     go('quiz');
   }
 
+  function toggleStudyTimer() {
+    if (secondsLeft <= 0) return;
+    if (timerRunning && timerDeadline !== null) {
+      setSecondsLeft(Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000)));
+      setTimerRunning(false);
+      setTimerDeadline(null);
+      return;
+    }
+    setTimerDeadline(Date.now() + secondsLeft * 1000);
+    setTimerRunning(true);
+  }
   function submitAnswer(remembered: boolean) {
     if (!active) return;
     const completedAnswers = [...answers, remembered];
@@ -130,6 +153,7 @@ function App() {
       setActive({ ...active, scores: nextScores });
       setRound(1);
       setSecondsLeft(LEARNING_DURATION_SECONDS);
+      setTimerDeadline(null);
       setTimerRunning(false);
       go('study');
       return;
@@ -185,7 +209,7 @@ function App() {
           words={currentWords}
           secondsLeft={secondsLeft}
           timerRunning={timerRunning}
-          onToggleTimer={() => setTimerRunning((running) => !running)}
+          onToggleTimer={toggleStudyTimer}
           onContinue={openQuiz}
         />}
         {screen === 'quiz' && active && <QuizScreen
@@ -269,18 +293,23 @@ function StudyScreen({ active, round, words, secondsLeft, timerRunning, onToggle
   onContinue: () => void;
 }) {
   const method = studyMethods.find((item) => item.id === active.methods[round])!;
+  const wordSet = wordSets.find((set) => set.id === active.wordSetIds[round])!;
+  const progressPercent = ((LEARNING_DURATION_SECONDS - secondsLeft) / LEARNING_DURATION_SECONDS) * 100;
   return (
     <section className="flow">
       <div className="heading"><label>ROUND {round + 1} / 2 · LEARN</label><h2>{method.name}で学ぼう</h2><p>{method.description}</p></div>
       <div className="method-instructions"><b>この方法でやってみよう</b><ol>{method.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol></div>
-      <div className="timer"><small>学習時間 · 5 MINUTES</small><strong>{String(Math.floor(secondsLeft / 60)).padStart(2, '0')}<i>:</i>{String(secondsLeft % 60).padStart(2, '0')}</strong><p>表示された単語を使って、アプリの外で学習しましょう。</p>
-        {secondsLeft === 0 ? <button className="primary" onClick={onContinue}>確認テストへ <ArrowRight size={16} /></button> : <button className="primary" onClick={onToggleTimer}>{timerRunning ? '一時停止　Ⅱ' : '学習を開始　▶'}</button>}
+      <div className="timer">
+        <small>学習時間 · 5 MINUTES</small>
+        <strong role="timer" aria-label={`残り${Math.floor(secondsLeft / 60)}分${secondsLeft % 60}秒`} aria-live="off">{String(Math.floor(secondsLeft / 60)).padStart(2, '0')}<i>:</i>{String(secondsLeft % 60).padStart(2, '0')}</strong>
+        <div className="timer-progress" role="progressbar" aria-label="5分間の学習進捗" aria-valuemin={0} aria-valuemax={LEARNING_DURATION_SECONDS} aria-valuenow={LEARNING_DURATION_SECONDS - secondsLeft}><i style={{ width: `${progressPercent}%` }} /></div>
+        <p>表示された単語を使って、アプリの外で学習しましょう。</p>
+        {secondsLeft === 0 ? <><p className="timer-state" role="status">学習時間が終わりました。確認テストへ進みましょう。</p><button className="primary" onClick={onContinue}>確認テストへ <ArrowRight size={16} /></button></> : <><p className="timer-state" role="status">{timerRunning ? '学習時間を計測中です。' : secondsLeft < LEARNING_DURATION_SECONDS ? '一時停止中です。準備ができたら再開しましょう。' : '準備ができたら学習タイマーを開始してください。'}</p><button className="primary" onClick={onToggleTimer}>{timerRunning ? '一時停止　Ⅱ' : secondsLeft < LEARNING_DURATION_SECONDS ? '学習を再開　▶' : '学習を開始　▶'}</button></>}
       </div>
-      <div className="wordbox"><b>📖 今日の英単語 <small>10 WORDS</small></b><div>{words.map((word) => <p key={word.id}><strong>{word.english}</strong><span>{method.id === 'recall' ? '••••••' : word.japanese}</span></p>)}</div></div>
+      <div className="wordbox"><b>📖 {wordSet.title} <small>{words.length} WORDS</small></b><div>{words.map((word) => <p key={word.id}><strong>{word.english}</strong><span>{method.id === 'recall' ? '••••••' : word.japanese}</span></p>)}</div></div>
     </section>
   );
 }
-
 function QuizScreen({ round, words, questionIndex, answerVisible, onShowAnswer, onAnswer }: {
   round: 0 | 1;
   words: WordItem[];
