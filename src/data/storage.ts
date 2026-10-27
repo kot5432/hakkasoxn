@@ -6,6 +6,11 @@ function isScorePair(value: unknown): value is [number, number] {
     && value.every((score) => Number.isInteger(score) && score >= 0 && score <= 10);
 }
 
+function isAnswerPair(value: unknown): value is [boolean[], boolean[]] {
+  return Array.isArray(value) && value.length === 2
+    && value.every((answers) => Array.isArray(answers) && answers.length === 10 && answers.every((answer) => typeof answer === 'boolean'));
+}
+
 function isExperiment(value: unknown): value is ExperimentRecord {
   if (!value || typeof value !== 'object') return false;
   const item = value as Partial<ExperimentRecord>;
@@ -16,6 +21,8 @@ function isExperiment(value: unknown): value is ExperimentRecord {
     && Array.isArray(item.studyDurationSeconds) && item.studyDurationSeconds.length === 2
     && item.studyDurationSeconds.every((seconds) => Number.isInteger(seconds) && seconds >= 0)
     && isScorePair(item.immediateScores)
+    && (item.immediateAnswers === undefined || (isAnswerPair(item.immediateAnswers)
+      && item.immediateAnswers.every((answers, index) => answers.filter(Boolean).length === item.immediateScores?.[index])))
     && (item.nextDayScores === undefined || isScorePair(item.nextDayScores))
     && typeof item.completedAt === 'string';
 }

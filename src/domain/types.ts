@@ -31,6 +31,7 @@ export interface ExperimentRecord {
   wordSetIds: [string, string];
   studyDurationSeconds: [number, number];
   immediateScores: [number, number];
+  immediateAnswers?: [boolean[], boolean[]];
   nextDayScores?: [number, number];
   completedAt: string;
 }

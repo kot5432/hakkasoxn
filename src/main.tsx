@@ -7,6 +7,7 @@ import { studyMethods, methodName } from './data/methods';
 import { clearExperiments, loadExperiments, saveExperiments } from './data/storage';
 import { wordSets } from './data/wordSets';
 import { LEARNING_DURATION_SECONDS } from './domain/constants';
+import { countRememberedAnswers } from './domain/scoring';
 import type { ExperimentRecord, Screen, StudyMethodId, WordItem } from './domain/types';
 import './style.css';
 
@@ -17,6 +18,7 @@ interface ActiveExperiment {
   prediction: StudyMethodId;
   wordSetIds: [string, string];
   scores: number[];
+  answersByRound: [boolean[], boolean[]];
 }
 
 const screenFromPath = (pathname: string): Screen => {
@@ -108,6 +110,7 @@ function App() {
       prediction,
       wordSetIds: [wordSets[firstSetIndex].id, wordSets[secondSetIndex].id],
       scores: [],
+      answersByRound: [[], []],
     };
     setActive(record);
     setRound(0);
@@ -147,10 +150,13 @@ function App() {
       return;
     }
 
-    const score = completedAnswers.filter(Boolean).length;
+    const score = countRememberedAnswers(completedAnswers);
     const nextScores = [...active.scores, score];
+    const nextAnswers: [boolean[], boolean[]] = round === 0
+      ? [completedAnswers, []]
+      : [active.answersByRound[0], completedAnswers];
     if (round === 0) {
-      setActive({ ...active, scores: nextScores });
+      setActive({ ...active, scores: nextScores, answersByRound: nextAnswers });
       setRound(1);
       setSecondsLeft(LEARNING_DURATION_SECONDS);
       setTimerDeadline(null);
@@ -167,12 +173,13 @@ function App() {
       wordSetIds: active.wordSetIds,
       studyDurationSeconds: [LEARNING_DURATION_SECONDS, LEARNING_DURATION_SECONDS],
       immediateScores: [nextScores[0], nextScores[1]],
+      immediateAnswers: nextAnswers,
       completedAt: new Date().toISOString(),
     };
     const nextExperiments = [completed, ...experiments];
     saveExperiments(nextExperiments);
     setExperiments(nextExperiments);
-    setActive({ ...active, scores: nextScores });
+    setActive({ ...active, scores: nextScores, answersByRound: nextAnswers });
     go('result');
   }
 
