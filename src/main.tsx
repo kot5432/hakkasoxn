@@ -75,6 +75,10 @@ function App() {
       navigate('/', { replace: true });
       return;
     }
+    if (active && active.scores.length >= 2 && ['study', 'quiz'].includes(screen)) {
+      navigate(routeFor('result', active.id), { replace: true });
+      return;
+    }
     if (active && screen === 'quiz' && secondsLeft > 0) {
       navigate(routeFor('study', active.id), { replace: true });
       return;
