@@ -71,8 +71,18 @@ function App() {
   }, [timerDeadline, timerRunning]);
 
   useEffect(() => {
-    if (['study', 'quiz', 'result'].includes(screen) && !active) navigate('/', { replace: true });
-  }, [active, navigate, screen]);
+    if (['study', 'quiz', 'result'].includes(screen) && !active) {
+      navigate('/', { replace: true });
+      return;
+    }
+    if (active && screen === 'quiz' && secondsLeft > 0) {
+      navigate(routeFor('study', active.id), { replace: true });
+      return;
+    }
+    if (active && screen === 'result' && active.scores.length < 2) {
+      navigate(routeFor('study', active.id), { replace: true });
+    }
+  }, [active, navigate, screen, secondsLeft]);
 
   const go = (target: Screen, experimentId = active?.id) => navigate(routeFor(target, experimentId));
   const currentSet = active ? wordSets.find((set) => set.id === active.wordSetIds[round]) : undefined;
