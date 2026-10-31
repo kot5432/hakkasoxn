@@ -28,7 +28,7 @@ React、TypeScript、Vite、Tailwind CSS、React Router、Recharts、localStorag
 - 選んだ2種類のうち、実験前の予想を選ぶ
 - 勉強法ごとの説明と10問の英単語を表示
 - 一時停止・再開に対応した5分タイマーと残り時間の進捗表示
-- 自己採点テスト、結果比較、履歴表示
+- 自己採点テスト、結果比較、詳細付き実験履歴
 - バージョン付きlocalStorage保存と旧形式の履歴移行
 - PC・スマートフォン向けレイアウト
 

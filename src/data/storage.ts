@@ -70,12 +70,22 @@ export function loadExperiments(): ExperimentRecord[] {
   }
 }
 
-export function saveExperiments(experiments: ExperimentRecord[]): void {
-  const store: ExperimentStore = { version: STORAGE_VERSION, experiments };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+export function saveExperiments(experiments: ExperimentRecord[]): boolean {
+  try {
+    const store: ExperimentStore = { version: STORAGE_VERSION, experiments };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export function clearExperiments(): void {
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(LEGACY_STORAGE_KEY);
+export function clearExperiments(): boolean {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }

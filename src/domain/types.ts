@@ -41,4 +41,4 @@ export interface ExperimentStore {
   experiments: ExperimentRecord[];
 }
 
-export type Screen = 'home' | 'setup' | 'study' | 'quiz' | 'result' | 'history';
+export type Screen = 'home' | 'setup' | 'study' | 'quiz' | 'result' | 'history' | 'historyDetail';
