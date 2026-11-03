@@ -49,5 +49,39 @@
       { "id": "c-09", "english": "summer", "japanese": "夏", "level": 1 },
       { "id": "c-10", "english": "remember", "japanese": "覚えている", "level": 1 }
     ]
+  },
+  {
+    "id": "set-d",
+    "title": "単語セット D",
+    "level": 1,
+    "words": [
+      { "id": "d-01", "english": "animal", "japanese": "動物", "level": 1 },
+      { "id": "d-02", "english": "collect", "japanese": "集める", "level": 1 },
+      { "id": "d-03", "english": "danger", "japanese": "危険", "level": 1 },
+      { "id": "d-04", "english": "enough", "japanese": "十分な", "level": 1 },
+      { "id": "d-05", "english": "follow", "japanese": "ついて行く", "level": 1 },
+      { "id": "d-06", "english": "island", "japanese": "島", "level": 1 },
+      { "id": "d-07", "english": "message", "japanese": "伝言", "level": 1 },
+      { "id": "d-08", "english": "perhaps", "japanese": "おそらく", "level": 1 },
+      { "id": "d-09", "english": "recent", "japanese": "最近の", "level": 1 },
+      { "id": "d-10", "english": "surprise", "japanese": "驚かせる", "level": 1 }
+    ]
+  },
+  {
+    "id": "set-e",
+    "title": "単語セット E",
+    "level": 1,
+    "words": [
+      { "id": "e-01", "english": "agree", "japanese": "賛成する", "level": 1 },
+      { "id": "e-02", "english": "believe", "japanese": "信じる", "level": 1 },
+      { "id": "e-03", "english": "century", "japanese": "世紀", "level": 1 },
+      { "id": "e-04", "english": "discover", "japanese": "発見する", "level": 1 },
+      { "id": "e-05", "english": "example", "japanese": "例", "level": 1 },
+      { "id": "e-06", "english": "friendly", "japanese": "親しみやすい", "level": 1 },
+      { "id": "e-07", "english": "happen", "japanese": "起こる", "level": 1 },
+      { "id": "e-08", "english": "improve", "japanese": "改善する", "level": 1 },
+      { "id": "e-09", "english": "possible", "japanese": "可能な", "level": 1 },
+      { "id": "e-10", "english": "thought", "japanese": "考え", "level": 1 }
+    ]
   }
 ]

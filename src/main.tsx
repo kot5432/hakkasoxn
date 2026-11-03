@@ -7,6 +7,7 @@ import { studyMethods, methodName } from './data/methods';
 import { clearExperiments, loadExperiments, saveExperiments } from './data/storage';
 import { wordSets } from './data/wordSets';
 import { LEARNING_DURATION_SECONDS } from './domain/constants';
+import { isNextDayTestAvailable } from './domain/dates';
 import { countRememberedAnswers } from './domain/scoring';
 import type { ExperimentRecord, Screen, StudyMethodId, WordItem } from './domain/types';
 import './style.css';
@@ -22,6 +23,7 @@ interface ActiveExperiment {
 }
 
 const screenFromPath = (pathname: string): Screen => {
+  if (pathname.endsWith('/next-day')) return 'nextDayQuiz';
   if (pathname === '/experiment/new') return 'setup';
   if (pathname.endsWith('/study')) return 'study';
   if (pathname.endsWith('/test')) return 'quiz';
@@ -35,6 +37,7 @@ const routeFor = (screen: Screen, experimentId?: string): string => {
   if (screen === 'setup') return '/experiment/new';
   if (screen === 'history') return '/history';
   if (screen === 'historyDetail') return `/history/${experimentId}`;
+  if (screen === 'nextDayQuiz') return `/history/${experimentId}/next-day`;
   if (screen === 'study') return `/experiment/${experimentId}/study`;
   if (screen === 'quiz') return `/experiment/${experimentId}/test`;
   if (screen === 'result') return `/experiment/${experimentId}/result`;
@@ -45,6 +48,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const screen = screenFromPath(location.pathname);
+  const nextDayId = screen === 'nextDayQuiz' ? location.pathname.split('/')[2] : undefined;
   const [experiments, setExperiments] = useState<ExperimentRecord[]>(loadExperiments);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const [selectedMethods, setSelectedMethods] = useState<StudyMethodId[]>([]);
@@ -94,6 +98,7 @@ function App() {
   const go = (target: Screen, experimentId = active?.id) => navigate(routeFor(target, experimentId));
   const currentSet = active ? wordSets.find((set) => set.id === active.wordSetIds[round]) : undefined;
   const currentWords = currentSet?.words ?? wordSets[0].words;
+  const nextDayExperiment = nextDayId ? experiments.find((item) => item.id === nextDayId) : undefined;
 
   function startNewExperiment() {
     setStorageMessage(null);
@@ -213,6 +218,16 @@ function App() {
     setExperiments([]);
   }
 
+  function saveNextDayResults(experimentId: string, scores: [number, number], answers: [boolean[], boolean[]]) {
+    const updated = experiments.map((item) => item.id === experimentId
+      ? { ...item, nextDayScores: scores, nextDayAnswers: answers, nextDayCompletedAt: new Date().toISOString() }
+      : item);
+    const saved = saveExperiments(updated);
+    setStorageMessage(saved ? null : '翌日テストの結果を保存できませんでした。ページを閉じると失われる可能性があります。');
+    setExperiments(updated);
+    go('historyDetail', experimentId);
+  }
+
   return (
     <div className="app">
       <header>
@@ -220,7 +235,7 @@ function App() {
           <span><FlaskConical size={20} /></span>
           <b>まなびラボ<small>STUDY METHOD LAB</small></b>
         </button>
-        <button className={`nav ${screen === 'history' || screen === 'historyDetail' ? 'nav-active' : ''}`} onClick={() => go('history')}>
+        <button className={`nav ${['history', 'historyDetail', 'nextDayQuiz'].includes(screen) ? 'nav-active' : ''}`} onClick={() => go('history')}>
           <History size={17} /> 実験履歴 <i>{experiments.length}</i>
         </button>
       </header>
@@ -253,7 +268,17 @@ function App() {
         />}
         {screen === 'result' && active && <ResultScreen active={active} storageMessage={storageMessage} onHome={() => go('home')} onHistory={() => go('history')} onRetry={startNewExperiment} />}
         {screen === 'history' && <HistoryScreen experiments={experiments} storageMessage={storageMessage} onStart={startNewExperiment} onDelete={deleteExperiments} onOpen={(id) => go('historyDetail', id)} />}
-        {screen === 'historyDetail' && <HistoryDetailScreen experiment={experiments.find((item) => routeFor('historyDetail', item.id) === location.pathname)} onBack={() => go('history')} />}
+        {screen === 'historyDetail' && <HistoryDetailScreen
+          experiment={experiments.find((item) => routeFor('historyDetail', item.id) === location.pathname)}
+          storageMessage={storageMessage}
+          onBack={() => go('history')}
+          onStartNextDay={(id) => go('nextDayQuiz', id)}
+        />}
+        {screen === 'nextDayQuiz' && <NextDayQuizScreen
+          experiment={nextDayExperiment}
+          onBack={() => nextDayId ? go('historyDetail', nextDayId) : go('history')}
+          onComplete={(scores, answers) => nextDayExperiment && saveNextDayResults(nextDayExperiment.id, scores, answers)}
+        />}
       </main>
       <footer>まなびラボ <span>結果は、あなたの次のヒント。</span></footer>
     </div>
@@ -342,22 +367,71 @@ function StudyScreen({ active, round, words, secondsLeft, timerRunning, onToggle
     </section>
   );
 }
-function QuizScreen({ round, words, questionIndex, answerVisible, onShowAnswer, onAnswer }: {
+function QuizScreen({ round, words, questionIndex, answerVisible, onShowAnswer, onAnswer, nextDay = false }: {
   round: 0 | 1;
   words: WordItem[];
   questionIndex: number;
   answerVisible: boolean;
   onShowAnswer: () => void;
   onAnswer: (remembered: boolean) => void;
+  nextDay?: boolean;
 }) {
   const word = words[questionIndex];
   return (
-    <section className="flow"><div className="heading"><label>ROUND {round + 1} · QUICK CHECK</label><h2>意味を思い出してみよう</h2><p>答えを見る前に、頭の中で意味を考えてください。</p></div>
+    <section className="flow"><div className="heading"><label>{nextDay ? `NEXT DAY · ROUND ${round + 1} / 2` : `ROUND ${round + 1} · QUICK CHECK`}</label><h2>{nextDay ? '翌日テスト' : '意味を思い出してみよう'}</h2><p>答えを見る前に、頭の中で意味を考えてください。</p></div>
       <div className="quiz"><small>QUESTION {questionIndex + 1} / {words.length}</small><div className="progress"><i style={{ width: `${((questionIndex + 1) / words.length) * 100}%` }} /></div><strong>{word.english}</strong>
         {answerVisible ? <><div className="answer">正解<b>{word.japanese}</b></div><p>覚えていましたか？正直に選んでください。</p><div className="row"><button onClick={() => onAnswer(true)}>✓ 覚えていた</button><button onClick={() => onAnswer(false)}>✕ 覚えていなかった</button></div></> : <><p>意味を思い出したら、答えを見てみましょう。</p><button className="primary" onClick={onShowAnswer}>答えを見る <ArrowRight size={16} /></button></>}
       </div><p className="note">このテストは自己採点式です。正直な振り返りに使いましょう。</p>
     </section>
   );
+}
+
+function NextDayQuizScreen({ experiment, onBack, onComplete }: {
+  experiment?: ExperimentRecord;
+  onBack: () => void;
+  onComplete: (scores: [number, number], answers: [boolean[], boolean[]]) => void;
+}) {
+  const [round, setRound] = useState<0 | 1>(0);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answerVisible, setAnswerVisible] = useState(false);
+  const [scores, setScores] = useState<[number, number]>([0, 0]);
+  const [answersByRound, setAnswersByRound] = useState<[boolean[], boolean[]]>([[], []]);
+  const available = !!experiment && isNextDayTestAvailable(experiment.completedAt);
+  const wordSet = experiment ? wordSets.find((set) => set.id === experiment.wordSetIds[round]) : undefined;
+
+  function submitAnswer(remembered: boolean) {
+    if (!wordSet || !experiment) return;
+    const completedAnswers = [...answersByRound[round], remembered];
+    const nextAnswers: [boolean[], boolean[]] = round === 0
+      ? [completedAnswers, answersByRound[1]]
+      : [answersByRound[0], completedAnswers];
+    setAnswersByRound(nextAnswers);
+    setAnswerVisible(false);
+    if (questionIndex < wordSet.words.length - 1) {
+      setQuestionIndex((index) => index + 1);
+      return;
+    }
+
+    const score = countRememberedAnswers(completedAnswers);
+    const nextScores: [number, number] = round === 0 ? [score, scores[1]] : [scores[0], score];
+    setScores(nextScores);
+    if (round === 0) {
+      setRound(1);
+      setQuestionIndex(0);
+      return;
+    }
+    onComplete(nextScores, nextAnswers);
+  }
+
+  if (!experiment) return <section className="flow"><div className="empty"><b>実験履歴が見つかりません</b><button className="secondary" onClick={onBack}>履歴へ戻る</button></div></section>;
+  if (experiment.nextDayScores) return <section className="flow"><div className="empty"><b>この実験の翌日テストは完了しています</b><p>{experiment.nextDayScores[0] * 10}% / {experiment.nextDayScores[1] * 10}%</p><button className="secondary" onClick={onBack}>実験の記録へ戻る</button></div></section>;
+  if (!available || !wordSet) return <section className="flow"><button className="back" onClick={onBack}><ArrowLeft size={16} /> 実験の記録へ</button><div className="empty"><span>🕒</span><b>翌日以降に受けられます</b><p>実験を行った日の翌日になってから、もう一度お試しください。</p></div></section>;
+
+  return <section className="flow">
+    <button className="back" onClick={onBack}><ArrowLeft size={16} /> 実験の記録へ</button>
+    <QuizScreen round={round} words={wordSet.words} questionIndex={questionIndex} answerVisible={answerVisible} onShowAnswer={() => setAnswerVisible(true)} onAnswer={submitAnswer} nextDay />
+    <p className="note">前回と同じ単語を使います。答えを見ずに思い出してから自己採点してください。</p>
+  </section>;
 }
 
 function ResultScreen({ active, storageMessage, onHome, onHistory, onRetry }: { active: ActiveExperiment; storageMessage: string | null; onHome: () => void; onHistory: () => void; onRetry: () => void }) {
@@ -391,14 +465,34 @@ function HistoryScreen({ experiments, storageMessage, onStart, onDelete, onOpen 
   );
 }
 
-function HistoryDetailScreen({ experiment, onBack }: { experiment?: ExperimentRecord; onBack: () => void }) {
+function HistoryDetailScreen({ experiment, storageMessage, onBack, onStartNextDay }: {
+  experiment?: ExperimentRecord;
+  storageMessage: string | null;
+  onBack: () => void;
+  onStartNextDay: (id: string) => void;
+}) {
+  const nextDayAvailable = !!experiment && !experiment.nextDayScores && isNextDayTestAvailable(experiment.completedAt);
+  const averageChange = experiment?.nextDayScores
+    ? Math.round(((experiment.nextDayScores[0] - experiment.immediateScores[0] + experiment.nextDayScores[1] - experiment.immediateScores[1]) / 2) * 10)
+    : 0;
+  const nextDayComment = averageChange < 0
+    ? `翌日の正答率は、直後より平均${Math.abs(averageChange)}ポイント低い結果でした。`
+    : averageChange > 0
+      ? `翌日の正答率は、直後より平均${averageChange}ポイント高い結果でした。`
+      : '翌日の正答率は、直後と平均して同じ結果でした。';
   return (
     <section className="flow">
       <button className="back" onClick={onBack}><ArrowLeft size={16} /> 実験履歴へ</button>
       {!experiment ? <div className="empty"><span>🧪</span><b>この実験履歴が見つかりません</b><button className="secondary" onClick={onBack}>履歴へ戻る</button></div> : <>
+        {storageMessage && <p className="storage-warning" role="alert">{storageMessage}</p>}
         <div className="heading"><label>EXPERIMENT DETAIL</label><h2>実験の記録</h2><p>{new Date(experiment.date).toLocaleString('ja-JP')}</p></div>
         <div className="callout"><span>🔎</span><div><b>実験前の予想：{methodName(experiment.prediction)}</b><p>今回の結果は、勉強法の効果を証明するものではありません。次の実験の参考にしてください。</p></div></div>
         <div className="scores">{experiment.methods.map((method, index) => <article key={method}><b>{methodName(method)} {experiment.prediction === method && <small>あなたの予想</small>}</b><strong>{experiment.immediateScores[index] * 10}%</strong><p>{experiment.immediateScores[index]} / 10 問 正解</p></article>)}</div>
+        {experiment.nextDayScores ? <>
+          <div className="chart"><b>直後と翌日の比較 <small>同じ問題セットで確認した正答率</small></b><ResponsiveContainer width="100%" height={250}><BarChart data={experiment.methods.map((method, index) => ({ name: studyMethods.find((item) => item.id === method)?.shortName ?? method, 直後: experiment.immediateScores[index] * 10, 翌日: experiment.nextDayScores![index] * 10 }))}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" /><YAxis domain={[0, 100]} unit="%" /><Tooltip /><Bar dataKey="直後" fill="#9caf99" radius={[6, 6, 0, 0]} /><Bar dataKey="翌日" fill="#66866a" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></div>
+          <div className="callout">📊 {nextDayComment}</div>
+          <p className="note">自己採点による今回の記録です。勉強法の効果を証明するものではありません。</p>
+        </> : <div className="next-day-card"><b>翌日テスト</b><p>{nextDayAvailable ? '前回と同じ単語で、記憶の変化を確認できます。' : '実験日の翌日以降に受けられます。'}</p><button className="primary" disabled={!nextDayAvailable} onClick={() => onStartNextDay(experiment.id)}>{nextDayAvailable ? '翌日テストを始める' : '翌日以降に利用できます'} <ArrowRight size={16} /></button></div>}
         {experiment.methods.map((method, index) => {
           const wordSet = wordSets.find((set) => set.id === experiment.wordSetIds[index]);
           const answers = experiment.immediateAnswers?.[index];

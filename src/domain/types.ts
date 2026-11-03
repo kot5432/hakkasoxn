@@ -33,6 +33,8 @@ export interface ExperimentRecord {
   immediateScores: [number, number];
   immediateAnswers?: [boolean[], boolean[]];
   nextDayScores?: [number, number];
+  nextDayAnswers?: [boolean[], boolean[]];
+  nextDayCompletedAt?: string;
   completedAt: string;
 }
 
@@ -41,4 +43,4 @@ export interface ExperimentStore {
   experiments: ExperimentRecord[];
 }
 
-export type Screen = 'home' | 'setup' | 'study' | 'quiz' | 'result' | 'history' | 'historyDetail';
+export type Screen = 'home' | 'setup' | 'study' | 'quiz' | 'result' | 'history' | 'historyDetail' | 'nextDayQuiz';

@@ -12,3 +12,6 @@
 
 /* Day 7: fit compact phones and make keyboard focus easy to see */
 button:focus-visible{outline:3px solid #9cba96;outline-offset:3px}.link:focus-visible,.row button:focus-visible,.back:focus-visible{outline:3px solid #9cba96;outline-offset:3px}@media(max-width:340px){header{padding:0 12px}.brand{gap:7px;font-size:15px}.brand>span{width:34px;height:34px}.nav{gap:6px;font-size:11px}.flow{width:calc(100% - 28px)}.method{padding:11px 8px}.method small{overflow-wrap:anywhere}.wordbox{padding:15px 12px}}
+
+/* Day 8–10: make the delayed recall step clear and easy to use */
+.next-day-card{margin-top:15px;padding:18px;background:#fff;border:1px solid #e7ebe4;border-radius:14px}.next-day-card>b{font-size:13px;color:#425646}.next-day-card>p{font-size:11px;color:#89928a;line-height:1.7}.next-day-card .primary{min-height:44px}.primary:disabled{box-shadow:none}

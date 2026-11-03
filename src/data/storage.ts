@@ -24,6 +24,10 @@ function isExperiment(value: unknown): value is ExperimentRecord {
     && (item.immediateAnswers === undefined || (isAnswerPair(item.immediateAnswers)
       && item.immediateAnswers.every((answers, index) => answers.filter(Boolean).length === item.immediateScores?.[index])))
     && (item.nextDayScores === undefined || isScorePair(item.nextDayScores))
+    && (item.nextDayAnswers === undefined || (isAnswerPair(item.nextDayAnswers)
+      && item.nextDayScores !== undefined
+      && item.nextDayAnswers.every((answers, index) => answers.filter(Boolean).length === item.nextDayScores?.[index])))
+    && (item.nextDayCompletedAt === undefined || typeof item.nextDayCompletedAt === 'string')
     && typeof item.completedAt === 'string';
 }
 
