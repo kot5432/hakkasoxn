@@ -47,7 +47,7 @@ function App() {
   const [resumedFromProgress, setResumedFromProgress] = useState(!!initialProgress);
   const [selectedMethods, setSelectedMethods] = useState<StudyMethodId[]>([]);
   const [prediction, setPrediction] = useState<StudyMethodId>();
-  const [recallTranslationsVisible, setRecallTranslationsVisible] = useState(false);
+  const [recallTranslationsVisible, setRecallTranslationsVisible] = useState(true);
   const [active, setActive] = useState<ExperimentProgress['active'] | undefined>(initialProgress?.active);
   const [round, setRound] = useState<0 | 1>(initialProgress?.round ?? 0);
   const [secondsLeft, setSecondsLeft] = useState(initialProgress?.secondsLeft ?? LEARNING_DURATION_SECONDS);
@@ -144,7 +144,7 @@ function App() {
     setSelectedMethods([]);
     setPrediction(undefined);
     setActive(undefined);
-    setRecallTranslationsVisible(false);
+    setRecallTranslationsVisible(true);
     setQuestionIndex(0);
     setAnswerVisible(false);
     setAnswers([]);
@@ -189,7 +189,7 @@ function App() {
       answersByRound: [[], []],
     };
     setActive(record);
-    setRecallTranslationsVisible(false);
+    setRecallTranslationsVisible(true);
     setRound(0);
     setSecondsLeft(LEARNING_DURATION_SECONDS);
     setTimerDeadline(null);
@@ -235,7 +235,7 @@ function App() {
     if (round === 0) {
       setActive({ ...active, scores: nextScores, answersByRound: nextAnswers });
       setRound(1);
-      setRecallTranslationsVisible(false);
+      setRecallTranslationsVisible(true);
       setSecondsLeft(LEARNING_DURATION_SECONDS);
       setTimerDeadline(null);
       setTimerRunning(false);
@@ -424,7 +424,7 @@ function StudyScreen({ active, round, words, secondsLeft, timerRunning, recallTr
         <p>表示された単語を使って、アプリの外で学習しましょう。</p>
         {secondsLeft === 0 ? <><p className="timer-state" role="status">学習時間が終わりました。確認テストへ進みましょう。</p><button className="primary" onClick={onContinue}>確認テストへ <ArrowRight size={16} /></button></> : <><p className="timer-state" role="status">{timerRunning ? '学習時間を計測中です。' : secondsLeft < LEARNING_DURATION_SECONDS ? '一時停止中です。準備ができたら再開しましょう。' : '準備ができたら学習タイマーを開始してください。'}</p><button className="primary" onClick={onToggleTimer}>{timerRunning ? '一時停止　Ⅱ' : secondsLeft < LEARNING_DURATION_SECONDS ? '学習を再開　▶' : '学習を開始　▶'}</button></>}
       </div>
-      <div className="wordbox"><b>📖 {wordSet.title} <small>{words.length} WORDS</small></b>{method.id === 'recall' && <button type="button" className="translation-toggle" aria-expanded={recallTranslationsVisible} onClick={onToggleRecallTranslations}>{recallTranslationsVisible ? '日本語訳を隠す' : '意味を思い出したら、日本語訳を表示'}</button>}<div>{words.map((word) => <p key={word.id}><strong>{word.english}</strong><span>{method.id !== 'recall' || recallTranslationsVisible ? word.japanese : '••••••'}</span></p>)}</div></div>
+      <div className="wordbox"><b>📖 {wordSet.title} <small>{words.length} WORDS</small></b>{method.id === 'recall' && <button type="button" className="translation-toggle" aria-expanded={recallTranslationsVisible} onClick={onToggleRecallTranslations}>{recallTranslationsVisible ? '日本語訳を隠して思い出す練習' : '日本語訳を表示する'}</button>}<div>{words.map((word) => <p key={word.id}><strong>{word.english}</strong><span>{method.id !== 'recall' || recallTranslationsVisible ? word.japanese : '••••••'}</span></p>)}</div></div>
     </section>
   );
 }
