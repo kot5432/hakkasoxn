@@ -5,22 +5,13 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { ArrowLeft, ArrowRight, Check, FlaskConical, History, RotateCcw, Sparkles } from 'lucide-react';
 import { studyMethods, methodName } from './data/methods';
 import { clearExperiments, loadExperiments, saveExperiments } from './data/storage';
+import { clearExperimentProgress, loadExperimentProgress, saveExperimentProgress } from './data/progress';
 import { wordSets } from './data/wordSets';
 import { LEARNING_DURATION_SECONDS } from './domain/constants';
 import { isNextDayTestAvailable } from './domain/dates';
 import { countRememberedAnswers } from './domain/scoring';
-import type { ExperimentRecord, Screen, StudyMethodId, WordItem } from './domain/types';
+import type { ExperimentProgress, ExperimentRecord, Screen, StudyMethodId, WordItem } from './domain/types';
 import './style.css';
-
-interface ActiveExperiment {
-  id: string;
-  date: string;
-  methods: [StudyMethodId, StudyMethodId];
-  prediction: StudyMethodId;
-  wordSetIds: [string, string];
-  scores: number[];
-  answersByRound: [boolean[], boolean[]];
-}
 
 const screenFromPath = (pathname: string): Screen => {
   if (pathname.endsWith('/next-day')) return 'nextDayQuiz';
@@ -49,18 +40,54 @@ function App() {
   const location = useLocation();
   const screen = screenFromPath(location.pathname);
   const nextDayId = screen === 'nextDayQuiz' ? location.pathname.split('/')[2] : undefined;
+  const [initialProgress] = useState(loadExperimentProgress);
   const [experiments, setExperiments] = useState<ExperimentRecord[]>(loadExperiments);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
+  const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [resumedFromProgress, setResumedFromProgress] = useState(!!initialProgress);
   const [selectedMethods, setSelectedMethods] = useState<StudyMethodId[]>([]);
   const [prediction, setPrediction] = useState<StudyMethodId>();
-  const [active, setActive] = useState<ActiveExperiment>();
-  const [round, setRound] = useState<0 | 1>(0);
-  const [secondsLeft, setSecondsLeft] = useState(LEARNING_DURATION_SECONDS);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerDeadline, setTimerDeadline] = useState<number | null>(null);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [answerVisible, setAnswerVisible] = useState(false);
-  const [answers, setAnswers] = useState<boolean[]>([]);
+  const [active, setActive] = useState<ExperimentProgress['active'] | undefined>(initialProgress?.active);
+  const [round, setRound] = useState<0 | 1>(initialProgress?.round ?? 0);
+  const [secondsLeft, setSecondsLeft] = useState(initialProgress?.secondsLeft ?? LEARNING_DURATION_SECONDS);
+  const [timerRunning, setTimerRunning] = useState(initialProgress?.timerRunning ?? false);
+  const [timerDeadline, setTimerDeadline] = useState<number | null>(initialProgress?.timerDeadline ?? null);
+  const [questionIndex, setQuestionIndex] = useState(initialProgress?.questionIndex ?? 0);
+  const [answerVisible, setAnswerVisible] = useState(initialProgress?.answerVisible ?? false);
+  const [answers, setAnswers] = useState<boolean[]>(initialProgress?.answers ?? []);
+  const [progressReady, setProgressReady] = useState(false);
+
+  useEffect(() => setProgressReady(true), []);
+
+  useEffect(() => {
+    if (!progressReady) return;
+    if (active && (active.scores.length < 2 || screen === 'result' || screen === 'study' || screen === 'quiz')) {
+      const progressScreen: ExperimentProgress['screen'] = active.scores.length >= 2
+        ? 'result'
+        : screen === 'quiz' || (screen !== 'study' && secondsLeft === 0) ? 'quiz' : 'study';
+      const progress: ExperimentProgress = {
+        version: 1,
+        active,
+        screen: progressScreen,
+        round,
+        secondsLeft,
+        timerRunning,
+        timerDeadline,
+        questionIndex,
+        answerVisible,
+        answers,
+      };
+      setProgressMessage(saveExperimentProgress(progress)
+        ? null
+        : '実験の途中経過をこのブラウザーに保存できません。ページを閉じると進行状況が失われる可能性があります。');
+      return;
+    }
+    if (active && active.scores.length >= 2) setActive(undefined);
+    const cleared = clearExperimentProgress();
+    if (!cleared) setProgressMessage('実験の途中経過を削除できませんでした。');
+    else setProgressMessage(null);
+    setResumedFromProgress(false);
+  }, [progressReady, active, screen, round, timerRunning, timerDeadline, questionIndex, answerVisible, answers]);
 
   useEffect(() => {
     if (!timerRunning || timerDeadline === null) return;
@@ -82,8 +109,16 @@ function App() {
       navigate('/', { replace: true });
       return;
     }
+    if (active && active.scores.length < 2 && !['study', 'quiz'].includes(screen)) {
+      navigate(routeFor(secondsLeft === 0 ? 'quiz' : 'study', active.id), { replace: true });
+      return;
+    }
     if (active && active.scores.length >= 2 && ['study', 'quiz'].includes(screen)) {
       navigate(routeFor('result', active.id), { replace: true });
+      return;
+    }
+    if (active && ['study', 'quiz', 'result'].includes(screen) && location.pathname.split('/')[2] !== active.id) {
+      navigate(routeFor(screen, active.id), { replace: true });
       return;
     }
     if (active && screen === 'quiz' && secondsLeft > 0) {
@@ -93,7 +128,7 @@ function App() {
     if (active && screen === 'result' && active.scores.length < 2) {
       navigate(routeFor('study', active.id), { replace: true });
     }
-  }, [active, navigate, screen, secondsLeft]);
+  }, [active, navigate, screen, secondsLeft, location.pathname]);
 
   const go = (target: Screen, experimentId = active?.id) => navigate(routeFor(target, experimentId));
   const currentSet = active ? wordSets.find((set) => set.id === active.wordSetIds[round]) : undefined;
@@ -108,7 +143,23 @@ function App() {
     setSelectedMethods([]);
     setPrediction(undefined);
     setActive(undefined);
+    setQuestionIndex(0);
+    setAnswerVisible(false);
+    setAnswers([]);
+    setResumedFromProgress(false);
     go('setup');
+  }
+
+  function leaveExperiment(target: 'home' | 'history') {
+    if (active && active.scores.length < 2) {
+      if (!window.confirm('進行中の実験を終了して移動しますか？保存済みの履歴には影響しません。')) return;
+      setActive(undefined);
+      setTimerRunning(false);
+      setTimerDeadline(null);
+      setResumedFromProgress(false);
+    }
+    if (active?.scores.length === 2) setActive(undefined);
+    go(target);
   }
 
   function toggleMethod(id: StudyMethodId) {
@@ -126,7 +177,7 @@ function App() {
     const firstSetIndex = Math.floor(Math.random() * wordSets.length);
     let secondSetIndex = Math.floor(Math.random() * wordSets.length);
     if (firstSetIndex === secondSetIndex) secondSetIndex = (secondSetIndex + 1) % wordSets.length;
-    const record: ActiveExperiment = {
+    const record: ExperimentProgress['active'] = {
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
       methods: [firstMethod, secondMethod],
@@ -231,15 +282,17 @@ function App() {
   return (
     <div className="app">
       <header>
-        <button className="brand" onClick={() => go('home')} aria-label="まなびラボ ホーム">
+        <button className="brand" onClick={() => leaveExperiment('home')} aria-label="まなびラボ ホーム">
           <span><FlaskConical size={20} /></span>
           <b>まなびラボ<small>STUDY METHOD LAB</small></b>
         </button>
-        <button className={`nav ${['history', 'historyDetail', 'nextDayQuiz'].includes(screen) ? 'nav-active' : ''}`} onClick={() => go('history')}>
+        <button className={`nav ${['history', 'historyDetail', 'nextDayQuiz'].includes(screen) ? 'nav-active' : ''}`} onClick={() => leaveExperiment('history')}>
           <History size={17} /> 実験履歴 <i>{experiments.length}</i>
         </button>
       </header>
       <main>
+        {progressMessage && <p className="storage-warning app-storage-warning" role="alert">{progressMessage}</p>}
+        {resumedFromProgress && active && ['study', 'quiz'].includes(screen) && <p className="resume-message" role="status">前回中断した実験を、続きから再開しています。</p>}
         {screen === 'home' && <HomeScreen onStart={startNewExperiment} onHistory={() => go('history')} />}
         {screen === 'setup' && <SetupScreen
           selectedMethods={selectedMethods}
@@ -266,7 +319,7 @@ function App() {
           onShowAnswer={() => setAnswerVisible(true)}
           onAnswer={submitAnswer}
         />}
-        {screen === 'result' && active && <ResultScreen active={active} storageMessage={storageMessage} onHome={() => go('home')} onHistory={() => go('history')} onRetry={startNewExperiment} />}
+        {screen === 'result' && active && <ResultScreen active={active} storageMessage={storageMessage} onHome={() => leaveExperiment('home')} onHistory={() => leaveExperiment('history')} onRetry={startNewExperiment} />}
         {screen === 'history' && <HistoryScreen experiments={experiments} storageMessage={storageMessage} onStart={startNewExperiment} onDelete={deleteExperiments} onOpen={(id) => go('historyDetail', id)} />}
         {screen === 'historyDetail' && <HistoryDetailScreen
           experiment={experiments.find((item) => routeFor('historyDetail', item.id) === location.pathname)}
@@ -341,7 +394,7 @@ function SetupScreen({ selectedMethods, prediction, onToggleMethod, onPredict, o
 }
 
 function StudyScreen({ active, round, words, secondsLeft, timerRunning, onToggleTimer, onContinue }: {
-  active: ActiveExperiment;
+  active: ExperimentProgress['active'];
   round: 0 | 1;
   words: WordItem[];
   secondsLeft: number;
@@ -434,7 +487,7 @@ function NextDayQuizScreen({ experiment, onBack, onComplete }: {
   </section>;
 }
 
-function ResultScreen({ active, storageMessage, onHome, onHistory, onRetry }: { active: ActiveExperiment; storageMessage: string | null; onHome: () => void; onHistory: () => void; onRetry: () => void }) {
+function ResultScreen({ active, storageMessage, onHome, onHistory, onRetry }: { active: ExperimentProgress['active']; storageMessage: string | null; onHome: () => void; onHistory: () => void; onRetry: () => void }) {
   const scores: [number, number] = [active.scores[0] ?? 0, active.scores[1] ?? 0];
   const winnerIndex = scores[0] === scores[1] ? null : scores[0] > scores[1] ? 0 : 1;
   const predictionWasRight = winnerIndex !== null && active.methods[winnerIndex] === active.prediction;

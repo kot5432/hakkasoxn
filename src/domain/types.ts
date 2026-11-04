@@ -38,6 +38,27 @@ export interface ExperimentRecord {
   completedAt: string;
 }
 
+export interface ExperimentProgress {
+  version: 1;
+  active: {
+    id: string;
+    date: string;
+    methods: [StudyMethodId, StudyMethodId];
+    prediction: StudyMethodId;
+    wordSetIds: [string, string];
+    scores: number[];
+    answersByRound: [boolean[], boolean[]];
+  };
+  screen: 'study' | 'quiz' | 'result';
+  round: 0 | 1;
+  secondsLeft: number;
+  timerRunning: boolean;
+  timerDeadline: number | null;
+  questionIndex: number;
+  answerVisible: boolean;
+  answers: boolean[];
+}
+
 export interface ExperimentStore {
   version: 1;
   experiments: ExperimentRecord[];
