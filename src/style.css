@@ -31,3 +31,18 @@ button:focus-visible{outline:3px solid #9cba96;outline-offset:3px}.link:focus-vi
 .recharts-cartesian-axis-tick-value{font-size:18px!important}
 @media(max-width:680px){.method b,.method small,.scores b,.scores p,.wordbox p,.row:not(.center) button{font-size:18px!important}.steps{font-size:17px!important}.nav{font-size:17px}}
 @media(max-width:390px){.brand small{font-size:13px}.nav{font-size:16px}.method b{font-size:18px!important}}
+
+/* Keep the navigation visible while scrolling */
+header{position:sticky;top:0;z-index:1000;width:100%;flex-shrink:0;background:#fafbf8}
+
+/* Desktop uses larger reading text than the compact phone layout */
+@media(min-width:681px){
+  .hero p,.hero>div:first-child>small,.paper small,.paper p,.hero-art aside,.steps,.heading p,.back,.method b,.method small,.callout,.setup-hint,.callout p,.callout b,.method-instructions>b,.method-instructions ol,.home-history,.timer>small,.timer>p,.quiz>p,.link,.wordbox>b small,.wordbox p,.quiz>small,.answer b,.note,.scores b,.scores b small,.scores p,.chart>b,.chart>b small,.history small,.history p,.empty b,.empty p,footer,.translation-toggle{font-size:20px!important}
+  .primary,.secondary,.nav,.guesses button,.row button{font-size:20px}
+  .recharts-cartesian-axis-tick-value,.recharts-tooltip-wrapper{font-size:18px!important}
+}
+@media(max-width:680px){
+  .hero p,.hero>div:first-child>small,.paper small,.paper p,.hero-art aside,.heading p,.back,.method b,.method small,.callout,.setup-hint,.callout p,.callout b,.method-instructions>b,.method-instructions ol,.home-history,.timer>small,.timer>p,.quiz>p,.link,.wordbox>b small,.wordbox p,.quiz>small,.answer b,.note,.scores b,.scores b small,.scores p,.chart>b,.chart>b small,.history small,.history p,.empty b,.empty p,footer,.translation-toggle{font-size:17px!important}
+  .primary,.secondary,.nav,.guesses button,.row button{font-size:18px}
+  .recharts-cartesian-axis-tick-value,.recharts-tooltip-wrapper{font-size:16px!important}
+}

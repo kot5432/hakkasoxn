@@ -61,6 +61,10 @@ function App() {
   useEffect(() => setProgressReady(true), []);
 
   useEffect(() => {
+    if (screen === 'study') setRecallTranslationsVisible(true);
+  }, [screen, active?.id, round]);
+
+  useEffect(() => {
     if (!progressReady) return;
     if (active && (active.scores.length < 2 || screen === 'result' || screen === 'study' || screen === 'quiz')) {
       const progressScreen: ExperimentProgress['screen'] = active.scores.length >= 2
