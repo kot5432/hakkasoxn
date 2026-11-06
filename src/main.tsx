@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -57,6 +57,8 @@ function App() {
   const [answerVisible, setAnswerVisible] = useState(initialProgress?.answerVisible ?? false);
   const [answers, setAnswers] = useState<boolean[]>(initialProgress?.answers ?? []);
   const [progressReady, setProgressReady] = useState(false);
+  const timerAudioContext = useRef<AudioContext | null>(null);
+  const timerAlertPlayed = useRef(false);
 
   useEffect(() => setProgressReady(true), []);
 
@@ -102,6 +104,10 @@ function App() {
       if (remaining === 0) {
         setTimerRunning(false);
         setTimerDeadline(null);
+        if (!timerAlertPlayed.current) {
+          timerAlertPlayed.current = true;
+          playTimerAlert();
+        }
       }
     };
     updateRemainingTime();
@@ -218,8 +224,46 @@ function App() {
       setTimerDeadline(null);
       return;
     }
+    timerAlertPlayed.current = false;
+    if (!timerAudioContext.current) {
+      const AudioContextConstructor = window.AudioContext
+        ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextConstructor) timerAudioContext.current = new AudioContextConstructor();
+    }
+    if (timerAudioContext.current?.state === 'suspended') {
+      void timerAudioContext.current.resume().catch(() => undefined);
+    }
     setTimerDeadline(Date.now() + secondsLeft * 1000);
     setTimerRunning(true);
+  }
+
+  function playTimerAlert() {
+    try {
+      navigator.vibrate?.([180, 100, 180]);
+    } catch {
+      // Vibration is optional and may be disabled by the browser or device.
+    }
+
+    const context = timerAudioContext.current;
+    if (!context || context.state === 'closed') return;
+    try {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const now = context.currentTime;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, now);
+      oscillator.frequency.setValueAtTime(1174.66, now + 0.18);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.16, now + 0.025);
+      gain.gain.setValueAtTime(0.16, now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.56);
+    } catch {
+      // The visible timer-complete message remains the fallback notification.
+    }
   }
   function submitAnswer(remembered: boolean) {
     if (!active) return;
