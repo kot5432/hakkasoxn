@@ -267,9 +267,13 @@ function App() {
     }
   }
   function submitAnswer(remembered: boolean) {
-    if (!active) return;
-    const completedAnswers = [...answers, remembered];
-    setAnswers(completedAnswers);
+    if (!active || answers.length > questionIndex) return;
+    setAnswers((current) => [...current, remembered]);
+  }
+
+  function continueQuiz() {
+    if (!active || answers.length <= questionIndex) return;
+    const completedAnswers = answers;
     setAnswerVisible(false);
     if (questionIndex < currentWords.length - 1) {
       setQuestionIndex((index) => index + 1);
@@ -284,6 +288,8 @@ function App() {
     if (round === 0) {
       setActive({ ...active, scores: nextScores, answersByRound: nextAnswers });
       setRound(1);
+      setQuestionIndex(0);
+      setAnswers([]);
       setRecallTranslationsVisible(true);
       setSecondsLeft(LEARNING_DURATION_SECONDS);
       setTimerDeadline(null);
@@ -371,8 +377,11 @@ function App() {
           words={currentWords}
           questionIndex={questionIndex}
           answerVisible={answerVisible}
+          answerRecorded={answers.length > questionIndex}
+          selectedAnswer={answers[questionIndex]}
           onShowAnswer={() => setAnswerVisible(true)}
           onAnswer={submitAnswer}
+          onContinue={continueQuiz}
         />}
         {screen === 'result' && active && <ResultScreen active={active} storageMessage={storageMessage} onHome={() => leaveExperiment('home')} onHistory={() => leaveExperiment('history')} onRetry={startNewExperiment} />}
         {screen === 'history' && <HistoryScreen experiments={experiments} storageMessage={storageMessage} onStart={startNewExperiment} onDelete={deleteExperiments} onOpen={(id) => go('historyDetail', id)} />}
@@ -477,20 +486,27 @@ function StudyScreen({ active, round, words, secondsLeft, timerRunning, recallTr
     </section>
   );
 }
-function QuizScreen({ round, words, questionIndex, answerVisible, onShowAnswer, onAnswer, nextDay = false }: {
+function QuizScreen({ round, words, questionIndex, answerVisible, answerRecorded, selectedAnswer, onShowAnswer, onAnswer, onContinue, nextDay = false }: {
   round: 0 | 1;
   words: WordItem[];
   questionIndex: number;
   answerVisible: boolean;
+  answerRecorded: boolean;
+  selectedAnswer?: boolean;
   onShowAnswer: () => void;
   onAnswer: (remembered: boolean) => void;
+  onContinue: () => void;
   nextDay?: boolean;
 }) {
   const word = words[questionIndex];
+  const lastQuestion = questionIndex === words.length - 1;
+  const continueLabel = lastQuestion
+    ? nextDay ? '翌日結果を確認する' : round === 0 ? '次の勉強へ進む' : '結果を見る'
+    : '次の問題へ';
   return (
     <section className="flow quiz-flow"><div className="heading"><label>{nextDay ? `NEXT DAY · ROUND ${round + 1} / 2` : `ROUND ${round + 1} · QUICK CHECK`}</label><h2>{nextDay ? '翌日テスト' : '意味を思い出してみよう'}</h2><p>答えを見る前に、頭の中で意味を考えてください。</p></div>
-      <div className="quiz"><small>QUESTION {questionIndex + 1} / {words.length}</small><div className="progress"><i style={{ width: `${((questionIndex + 1) / words.length) * 100}%` }} /></div><strong>{word.english}</strong>
-        {answerVisible ? <><div className="answer">正解<b>{word.japanese}</b></div><p>覚えていましたか？正直に選んでください。</p><div className="row"><button onClick={() => onAnswer(true)}>✓ 覚えていた</button><button onClick={() => onAnswer(false)}>✕ 覚えていなかった</button></div></> : <><p>意味を思い出したら、答えを見てみましょう。</p><button className="primary" onClick={onShowAnswer}>答えを見る <ArrowRight size={16} /></button></>}
+      <div className="quiz"><small>QUESTION {questionIndex + 1} / {words.length}</small><div className="progress"><i style={{ width: `${((questionIndex + 1) / words.length) * 100}%` }} /></div><ol className="quiz-steps" aria-label="テストの進め方"><li className={!answerVisible ? 'current' : 'done'}>意味を考える</li><li className={answerVisible && !answerRecorded ? 'current' : answerRecorded ? 'done' : ''}>答えを見る</li><li className={answerRecorded ? 'current' : ''}>自己採点</li></ol><strong>{word.english}</strong>
+        {answerVisible ? <><div className="answer">正解<b>{word.japanese}</b></div>{answerRecorded ? <><p className="answer-confirmation" role="status">「{selectedAnswer ? '覚えていた' : '覚えていなかった'}」で記録しました。</p><button className="primary quiz-continue" onClick={onContinue}>{continueLabel} <ArrowRight size={16} /></button></> : <><p>覚えていましたか？正直に選んでください。</p><div className="row quiz-answer-actions"><button onClick={() => onAnswer(true)}>✓ 覚えていた</button><button onClick={() => onAnswer(false)}>✕ 覚えていなかった</button></div></>}</> : <><p>意味を思い出したら、答えを見てみましょう。</p><button className="primary quiz-reveal" onClick={onShowAnswer}>答えを見る <ArrowRight size={16} /></button></>}
       </div><p className="note">このテストは自己採点式です。正直な振り返りに使いましょう。</p>
     </section>
   );
@@ -510,12 +526,17 @@ function NextDayQuizScreen({ experiment, onBack, onComplete }: {
   const wordSet = experiment ? wordSets.find((set) => set.id === experiment.wordSetIds[round]) : undefined;
 
   function submitAnswer(remembered: boolean) {
-    if (!wordSet || !experiment) return;
+    if (!wordSet || !experiment || answersByRound[round].length > questionIndex) return;
     const completedAnswers = [...answersByRound[round], remembered];
     const nextAnswers: [boolean[], boolean[]] = round === 0
       ? [completedAnswers, answersByRound[1]]
       : [answersByRound[0], completedAnswers];
     setAnswersByRound(nextAnswers);
+  }
+
+  function continueNextDayQuiz() {
+    if (!wordSet || !experiment || answersByRound[round].length <= questionIndex) return;
+    const completedAnswers = answersByRound[round];
     setAnswerVisible(false);
     if (questionIndex < wordSet.words.length - 1) {
       setQuestionIndex((index) => index + 1);
@@ -530,7 +551,7 @@ function NextDayQuizScreen({ experiment, onBack, onComplete }: {
       setQuestionIndex(0);
       return;
     }
-    onComplete(nextScores, nextAnswers);
+    onComplete(nextScores, answersByRound);
   }
 
   if (!experiment) return <section className="flow"><div className="empty"><b>実験履歴が見つかりません</b><button className="secondary" onClick={onBack}>履歴へ戻る</button></div></section>;
@@ -539,7 +560,7 @@ function NextDayQuizScreen({ experiment, onBack, onComplete }: {
 
   return <section className="flow">
     <button className="back" onClick={onBack}><ArrowLeft size={16} /> 実験の記録へ</button>
-    <QuizScreen round={round} words={wordSet.words} questionIndex={questionIndex} answerVisible={answerVisible} onShowAnswer={() => setAnswerVisible(true)} onAnswer={submitAnswer} nextDay />
+    <QuizScreen round={round} words={wordSet.words} questionIndex={questionIndex} answerVisible={answerVisible} answerRecorded={answersByRound[round].length > questionIndex} selectedAnswer={answersByRound[round][questionIndex]} onShowAnswer={() => setAnswerVisible(true)} onAnswer={submitAnswer} onContinue={continueNextDayQuiz} nextDay />
     <p className="note">前回と同じ単語を使います。答えを見ずに思い出してから自己採点してください。</p>
   </section>;
 }
@@ -557,7 +578,13 @@ function ResultScreen({ active, storageMessage, onHome, onHistory, onRetry }: { 
       {storageMessage && <p className="storage-warning" role="alert">{storageMessage}</p>}
       <div className="scores">{active.methods.map((method, index) => <article key={method}><b>{methodName(method)} {active.prediction === method && <small>あなたの予想</small>}</b><strong>{scores[index] * 10}%</strong><p>{scores[index]} / 10 問 正解</p></article>)}</div>
       <div className="chart"><b>正答率を比べる <small>自己採点による今回の結果</small></b><ResponsiveContainer width="100%" height={230}><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" /><YAxis domain={[0, 100]} unit="%" /><Tooltip /><Bar dataKey="正答率" fill="#789877" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
-      <div className="callout">✨ {comment}<br />次は別の問題セットでも試してみましょう。</div><p className="note">自己採点による結果です。問題の難しさや集中度でも変わるため、勉強法の効果を証明するものではありません。</p>
+      <div className="callout">✨ {comment}<br />次は別の問題セットでも試してみましょう。</div>
+      <details className="result-review"><summary>10問の自己採点を見返す</summary><div className="result-review-grid">{active.methods.map((method, methodIndex) => {
+        const wordSet = wordSets.find((set) => set.id === active.wordSetIds[methodIndex]);
+        const answers = active.answersByRound[methodIndex] ?? [];
+        return <section className="result-review-method" key={method}><h3>{methodName(method)} <span>{scores[methodIndex] * 10}%</span></h3><ol>{(wordSet?.words ?? []).map((word, wordIndex) => <li key={word.id}><span><strong>{word.english}</strong> · {word.japanese}</span><b className={answers[wordIndex] ? 'remembered' : 'review-again'}>{answers[wordIndex] ? '覚えていた' : '復習したい'}</b></li>)}</ol></section>;
+      })}</div></details>
+      <p className="note">自己採点による結果です。問題の難しさや集中度でも変わるため、勉強法の効果を証明するものではありません。</p>
       <div className="row center"><button className="secondary" onClick={onHome}>ホームへ</button><button className="secondary" onClick={onHistory}>実験履歴へ</button><button className="primary" onClick={onRetry}><RotateCcw size={16} /> もう一度実験する</button></div>
     </section>
   );
