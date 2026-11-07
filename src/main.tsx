@@ -422,7 +422,7 @@ function SetupScreen({ selectedMethods, prediction, onToggleMethod, onPredict, o
 }) {
   const canStart = selectedMethods.length === 2 && !!prediction && selectedMethods.includes(prediction);
   return (
-    <section className="flow">
+    <section className="flow setup-flow">
       <button className="back" onClick={onBack}><ArrowLeft size={16} /> ホームへ</button>
       <div className="heading"><label>STEP 1 · EXPERIMENT SETUP</label><h2>比べたい勉強法を選ぼう</h2><p>気になる方法を2つ選んでください。<b>{selectedMethods.length} / 2</b></p></div>
       <div className="methods">
@@ -462,7 +462,7 @@ function StudyScreen({ active, round, words, secondsLeft, timerRunning, recallTr
   const wordSet = wordSets.find((set) => set.id === active.wordSetIds[round])!;
   const progressPercent = ((LEARNING_DURATION_SECONDS - secondsLeft) / LEARNING_DURATION_SECONDS) * 100;
   return (
-    <section className="flow">
+    <section className="flow study-flow">
       <div className="heading"><label>ROUND {round + 1} / 2 · LEARN</label><h2>{method.name}で学ぼう</h2><p>{method.description}</p></div>
       <div className="method-instructions"><b>この方法でやってみよう</b><ol>{method.instructions.map((instruction) => <li key={instruction}>{instruction}</li>)}</ol></div>
       <div className="timer">
@@ -487,7 +487,7 @@ function QuizScreen({ round, words, questionIndex, answerVisible, onShowAnswer, 
 }) {
   const word = words[questionIndex];
   return (
-    <section className="flow"><div className="heading"><label>{nextDay ? `NEXT DAY · ROUND ${round + 1} / 2` : `ROUND ${round + 1} · QUICK CHECK`}</label><h2>{nextDay ? '翌日テスト' : '意味を思い出してみよう'}</h2><p>答えを見る前に、頭の中で意味を考えてください。</p></div>
+    <section className="flow quiz-flow"><div className="heading"><label>{nextDay ? `NEXT DAY · ROUND ${round + 1} / 2` : `ROUND ${round + 1} · QUICK CHECK`}</label><h2>{nextDay ? '翌日テスト' : '意味を思い出してみよう'}</h2><p>答えを見る前に、頭の中で意味を考えてください。</p></div>
       <div className="quiz"><small>QUESTION {questionIndex + 1} / {words.length}</small><div className="progress"><i style={{ width: `${((questionIndex + 1) / words.length) * 100}%` }} /></div><strong>{word.english}</strong>
         {answerVisible ? <><div className="answer">正解<b>{word.japanese}</b></div><p>覚えていましたか？正直に選んでください。</p><div className="row"><button onClick={() => onAnswer(true)}>✓ 覚えていた</button><button onClick={() => onAnswer(false)}>✕ 覚えていなかった</button></div></> : <><p>意味を思い出したら、答えを見てみましょう。</p><button className="primary" onClick={onShowAnswer}>答えを見る <ArrowRight size={16} /></button></>}
       </div><p className="note">このテストは自己採点式です。正直な振り返りに使いましょう。</p>
@@ -552,7 +552,7 @@ function ResultScreen({ active, storageMessage, onHome, onHistory, onRetry }: { 
     : `今回の実験では「${methodName(active.methods[winnerIndex])}」の正答率が${Math.abs(scores[0] - scores[1]) * 10}ポイント高い結果でした。${predictionWasRight ? '実験前の予想と一致しました。' : '実験前の予想とは異なる結果でした。'}`;
   const chartData = active.methods.map((method, index) => ({ name: methodName(method), 正答率: scores[index] * 10 }));
   return (
-    <section className="flow"><div className="heading"><label>YOUR EXPERIMENT RESULT</label><h2>今回の実験、おつかれさま！</h2><p>{new Date(active.date).toLocaleDateString('ja-JP')} の結果です。</p></div>
+    <section className="flow result-flow"><div className="heading"><label>YOUR EXPERIMENT RESULT</label><h2>今回の実験、おつかれさま！</h2><p>{new Date(active.date).toLocaleDateString('ja-JP')} の結果です。</p></div>
       {storageMessage && <p className="storage-warning" role="alert">{storageMessage}</p>}
       <div className="scores">{active.methods.map((method, index) => <article key={method}><b>{methodName(method)} {active.prediction === method && <small>あなたの予想</small>}</b><strong>{scores[index] * 10}%</strong><p>{scores[index]} / 10 問 正解</p></article>)}</div>
       <div className="chart"><b>正答率を比べる <small>自己採点による今回の結果</small></b><ResponsiveContainer width="100%" height={230}><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" /><YAxis domain={[0, 100]} unit="%" /><Tooltip /><Bar dataKey="正答率" fill="#789877" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
@@ -564,7 +564,7 @@ function ResultScreen({ active, storageMessage, onHome, onHistory, onRetry }: { 
 
 function HistoryScreen({ experiments, storageMessage, onStart, onDelete, onOpen }: { experiments: ExperimentRecord[]; storageMessage: string | null; onStart: () => void; onDelete: () => void; onOpen: (id: string) => void }) {
   return (
-    <section className="flow"><div className="heading"><label>YOUR LAB NOTE</label><h2>実験履歴</h2><p>これまでの実験を振り返りましょう。</p></div>
+    <section className="flow history-flow"><div className="heading"><label>YOUR LAB NOTE</label><h2>実験履歴</h2><p>これまでの実験を振り返りましょう。</p></div>
       {storageMessage && <p className="storage-warning" role="alert">{storageMessage}</p>}
       {!experiments.length ? <div className="empty"><span>🧪</span><b>まだ実験履歴がありません</b><p>最初の実験を始めて、自分の学び方を比べてみましょう。</p><button className="primary" onClick={onStart}>実験をはじめる <ArrowRight size={16} /></button></div> : <>
         {experiments.map((experiment) => <article className="history" key={experiment.id}><small>{new Date(experiment.date).toLocaleDateString('ja-JP')}</small>{experiment.methods.map((method, index) => <p key={method}>{methodName(method)}<b>{experiment.immediateScores[index] * 10}%</b></p>)}<small>予想：{methodName(experiment.prediction)}</small><button className="link" type="button" onClick={() => onOpen(experiment.id)}>詳細を見る <ArrowRight size={14} /></button></article>)}
@@ -590,7 +590,7 @@ function HistoryDetailScreen({ experiment, storageMessage, onBack, onStartNextDa
       ? `翌日の正答率は、直後より平均${averageChange}ポイント高い結果でした。`
       : '翌日の正答率は、直後と平均して同じ結果でした。';
   return (
-    <section className="flow">
+    <section className="flow history-detail-flow">
       <button className="back" onClick={onBack}><ArrowLeft size={16} /> 実験履歴へ</button>
       {!experiment ? <div className="empty"><span>🧪</span><b>この実験履歴が見つかりません</b><button className="secondary" onClick={onBack}>履歴へ戻る</button></div> : <>
         {storageMessage && <p className="storage-warning" role="alert">{storageMessage}</p>}
