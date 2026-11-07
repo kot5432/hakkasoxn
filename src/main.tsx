@@ -7,6 +7,7 @@ import { studyMethods, methodName } from './data/methods';
 import { clearExperiments, loadExperiments, saveExperiments } from './data/storage';
 import { clearExperimentProgress, loadExperimentProgress, saveExperimentProgress } from './data/progress';
 import { wordSets } from './data/wordSets';
+import { pronunciations } from './data/pronunciations';
 import { LEARNING_DURATION_SECONDS } from './domain/constants';
 import { isNextDayTestAvailable } from './domain/dates';
 import { countRememberedAnswers } from './domain/scoring';
@@ -472,7 +473,7 @@ function StudyScreen({ active, round, words, secondsLeft, timerRunning, recallTr
         <p>表示された単語を使って、アプリの外で学習しましょう。</p>
         {secondsLeft === 0 ? <><p className="timer-state" role="status">学習時間が終わりました。確認テストへ進みましょう。</p><button className="primary" onClick={onContinue}>確認テストへ <ArrowRight size={16} /></button></> : <><p className="timer-state" role="status">{timerRunning ? '学習時間を計測中です。' : secondsLeft < LEARNING_DURATION_SECONDS ? '一時停止中です。準備ができたら再開しましょう。' : '準備ができたら学習タイマーを開始してください。'}</p><button className="primary" onClick={onToggleTimer}>{timerRunning ? '一時停止　Ⅱ' : secondsLeft < LEARNING_DURATION_SECONDS ? '学習を再開　▶' : '学習を開始　▶'}</button></>}
       </div>
-      <div className="wordbox"><b>📖 {wordSet.title} <small>{words.length} WORDS</small></b>{method.id === 'recall' && <button type="button" className="translation-toggle" aria-expanded={recallTranslationsVisible} onClick={onToggleRecallTranslations}>{recallTranslationsVisible ? '日本語訳を隠して思い出す練習' : '日本語訳を表示する'}</button>}<div>{words.map((word) => <p key={word.id}><strong>{word.english}</strong><span>{method.id !== 'recall' || recallTranslationsVisible ? word.japanese : '••••••'}</span></p>)}</div></div>
+      <div className="wordbox"><b>📖 {wordSet.title} <small>{method.id === 'speak' ? '発音記号 · 米語' : `${words.length} WORDS`}</small></b>{method.id === 'recall' && <button type="button" className="translation-toggle" aria-expanded={recallTranslationsVisible} onClick={onToggleRecallTranslations}>{recallTranslationsVisible ? '日本語訳を隠して思い出す練習' : '日本語訳を表示する'}</button>}<div>{words.map((word) => <p key={word.id}><strong>{word.english}{method.id === 'speak' && <small className="pronunciation">/{pronunciations[word.english] ?? '発音データなし'}/</small>}</strong><span>{method.id !== 'recall' || recallTranslationsVisible ? word.japanese : '••••••'}</span></p>)}</div></div>
     </section>
   );
 }
