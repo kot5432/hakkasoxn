@@ -119,3 +119,6 @@ header{position:sticky;top:0;z-index:1000;width:100%;flex-shrink:0;background:#f
   .result-flow .recharts-responsive-container,.history-detail-flow .recharts-responsive-container{height:190px!important}
   .history-detail-flow>.callout{padding-top:7px;padding-bottom:7px}
 }
+
+/* Let the page body use the remaining viewport and keep the footer at the bottom */
+main{display:flex;flex:1;flex-direction:column;justify-content:center}
