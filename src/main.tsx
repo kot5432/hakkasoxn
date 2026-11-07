@@ -553,7 +553,7 @@ function ResultScreen({ active, storageMessage, onHome, onHistory, onRetry }: { 
     : `今回の実験では「${methodName(active.methods[winnerIndex])}」の正答率が${Math.abs(scores[0] - scores[1]) * 10}ポイント高い結果でした。${predictionWasRight ? '実験前の予想と一致しました。' : '実験前の予想とは異なる結果でした。'}`;
   const chartData = active.methods.map((method, index) => ({ name: methodName(method), 正答率: scores[index] * 10 }));
   return (
-    <section className="flow result-flow"><div className="heading"><label>YOUR EXPERIMENT RESULT</label><h2>今回の実験、おつかれさま！</h2><p>{new Date(active.date).toLocaleDateString('ja-JP')} の結果です。</p></div>
+    <section className={`flow result-flow${storageMessage ? ' has-storage-warning' : ''}`}><div className="heading"><label>YOUR EXPERIMENT RESULT</label><h2>今回の実験、おつかれさま！</h2><p>{new Date(active.date).toLocaleDateString('ja-JP')} の結果です。</p></div>
       {storageMessage && <p className="storage-warning" role="alert">{storageMessage}</p>}
       <div className="scores">{active.methods.map((method, index) => <article key={method}><b>{methodName(method)} {active.prediction === method && <small>あなたの予想</small>}</b><strong>{scores[index] * 10}%</strong><p>{scores[index]} / 10 問 正解</p></article>)}</div>
       <div className="chart"><b>正答率を比べる <small>自己採点による今回の結果</small></b><ResponsiveContainer width="100%" height={230}><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" /><YAxis domain={[0, 100]} unit="%" /><Tooltip /><Bar dataKey="正答率" fill="#789877" radius={[8, 8, 0, 0]} /></BarChart></ResponsiveContainer></div>
