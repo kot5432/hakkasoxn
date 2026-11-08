@@ -629,6 +629,12 @@ function HistoryDetailScreen({ experiment, storageMessage, onBack, onStartNextDa
           <div className="chart"><b>直後と翌日の比較 <small>同じ問題セットで確認した正答率</small></b><ResponsiveContainer width="100%" height={250}><BarChart data={experiment.methods.map((method, index) => ({ name: studyMethods.find((item) => item.id === method)?.shortName ?? method, 直後: experiment.immediateScores[index] * 10, 翌日: experiment.nextDayScores![index] * 10 }))}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" /><YAxis domain={[0, 100]} unit="%" /><Tooltip /><Bar dataKey="直後" fill="#9caf99" radius={[6, 6, 0, 0]} /><Bar dataKey="翌日" fill="#66866a" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></div>
           <div className="callout">📊 {nextDayComment}</div>
           <p className="note">自己採点による今回の記録です。勉強法の効果を証明するものではありません。</p>
+          <div className="next-day-review-grid" aria-label="翌日テストの各問題結果">{experiment.methods.map((method, index) => {
+            const wordSet = wordSets.find((set) => set.id === experiment.wordSetIds[index]);
+            const answers = experiment.nextDayAnswers?.[index];
+            const hasCompleteAnswers = !!wordSet && !!answers && answers.length === wordSet.words.length;
+            return <section className="next-day-review-card" key={method}><h3>{methodName(method)} <span>翌日テスト</span></h3>{hasCompleteAnswers && wordSet && answers ? <ul>{wordSet.words.map((word, wordIndex) => <li key={word.id}><strong>{word.english}</strong><span className="next-day-word-meaning">{word.japanese}</span><b className={answers[wordIndex] ? 'remembered' : 'review-again'}>{answers[wordIndex] ? '覚えていた' : '復習したい'}</b></li>)}</ul> : <p>この履歴には翌日テストの各問題の回答が記録されていません。</p>}</section>;
+          })}</div>
         </> : <div className="next-day-card"><b>翌日テスト</b><p>{nextDayAvailable ? '前回と同じ単語で、記憶の変化を確認できます。' : '実験日の翌日以降に受けられます。'}</p><button className="primary" disabled={!nextDayAvailable} onClick={() => onStartNextDay(experiment.id)}>{nextDayAvailable ? '翌日テストを始める' : '翌日以降に利用できます'} <ArrowRight size={16} /></button></div>}
         {experiment.methods.map((method, index) => {
           const wordSet = wordSets.find((set) => set.id === experiment.wordSetIds[index]);

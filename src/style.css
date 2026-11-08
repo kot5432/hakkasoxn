@@ -182,3 +182,15 @@ main{display:flex;flex:1;flex-direction:column;justify-content:center}
   .quiz-answer-actions button{min-height:58px}
   .result-review-grid{grid-template-columns:1fr}
 }
+.next-day-review-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.next-day-review-card{min-width:0;padding:16px 18px;background:#fff;border:1px solid #e5e9e2;border-radius:14px}
+.next-day-review-card h3{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px;color:#415744;font-size:18px}
+.next-day-review-card h3 span{color:#829084;font-size:14px;font-weight:500}
+.next-day-review-card ul{list-style:none;margin:0;padding:0}
+.next-day-review-card li{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"word result" "meaning result";align-items:center;gap:2px 12px;padding:9px 0;border-top:1px solid #eef0eb}
+.next-day-review-card li>strong{grid-area:word;color:#354a39;font-size:20px;letter-spacing:.01em}
+.next-day-word-meaning{grid-area:meaning;color:#78857a;font-size:15px}
+.next-day-review-card li>b{grid-area:result;padding:5px 9px;border-radius:999px;background:#edf4eb;color:#668565;font-size:13px;white-space:nowrap}
+.next-day-review-card li>b.review-again{background:#fbefeb;color:#ad7465}
+.next-day-review-card>p{margin:0;color:#7f8b81}
+@media(max-width:680px){.next-day-review-grid{grid-template-columns:1fr}.next-day-review-card{padding:12px 14px}.next-day-review-card li>strong{font-size:18px}}
